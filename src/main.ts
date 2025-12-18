@@ -5,16 +5,16 @@
  *
  */
 
-const { InstanceBase, Regex, runEntrypoint, TCPHelper } = require('@companion-module/base')
-const actions = require('./actions')
-const upgradeScripts = require('./upgrade')
+import { InstanceBase, Regex, runEntrypoint, TCPHelper } from '@companion-module/base'
+import * as actions from './actions'
+import upgradeScripts from './upgrade'
 
 /**
  * @extends InstanceBase
  * @since 2.0.0
  */
 
-class ModuleInstance extends InstanceBase {
+export class ModuleInstance extends InstanceBase {
 	/**
 	 * Create an instance.
 	 *
@@ -174,9 +174,7 @@ class ModuleInstance extends InstanceBase {
 				break
 
 			case 'preamp_pad':
-				cmd.buffers = [
-					Buffer.from([0xf0, 0, 0, 0x1a, 0x50, 0x10, 0x01, 0, 0, 0x0d, strip, opt.pad ? 0x7f : 0, 0xf7]),
-				]
+				cmd.buffers = [Buffer.from([0xf0, 0, 0, 0x1a, 0x50, 0x10, 0x01, 0, 0, 0x0d, strip, opt.pad ? 0x7f : 0, 0xf7])]
 				break
 
 			case 'hpf_control':
@@ -203,7 +201,7 @@ class ModuleInstance extends InstanceBase {
 				let sendCh = parseInt(opt.send)
 				let sendLevel = parseInt(opt.level)
 				let sendType = 0x01 // Default for aux sends
-				
+
 				if (actionId.includes('fx') && !actionId.includes('ufx')) {
 					sendType = 0x02 // FX sends
 				} else if (actionId.includes('matrix')) {
@@ -211,7 +209,7 @@ class ModuleInstance extends InstanceBase {
 				} else if (actionId.includes('ufx')) {
 					sendType = 0x04 // UFX sends
 				}
-				
+
 				cmd.buffers = [
 					Buffer.from([0xf0, 0, 0, 0x1a, 0x50, 0x10, 0x01, 0, 0, sendType, inputCh, sendCh, sendLevel, 0xf7]),
 				]
@@ -237,23 +235,23 @@ class ModuleInstance extends InstanceBase {
 				// Control Change message for UFX Unit Key Parameter with CC value scaling
 				let keyMidiCh = parseInt(opt.midiChannel) - 1 // Convert to 0-based
 				let controlNum = parseInt(opt.controlNumber)
-				
+
 				// Map key to CC value range (refer to protocol table)
 				let keyMapping = {
-					'C': 5,    // Mid-range value for C (0-10 range)
-					'C#': 16,  // Mid-range value for C# (11-21 range)
-					'D': 26,   // Mid-range value for D (22-31 range)
-					'D#': 37,  // Mid-range value for D# (32-42 range)
-					'E': 47,   // Mid-range value for E (43-52 range)
-					'F': 58,   // Mid-range value for F (53-63 range)
-					'F#': 69,  // Mid-range value for F# (64-74 range)
-					'G': 79,   // Mid-range value for G (75-84 range)
-					'G#': 90,  // Mid-range value for G# (85-95 range)
-					'A': 100,  // Mid-range value for A (96-105 range)
+					C: 5, // Mid-range value for C (0-10 range)
+					'C#': 16, // Mid-range value for C# (11-21 range)
+					D: 26, // Mid-range value for D (22-31 range)
+					'D#': 37, // Mid-range value for D# (32-42 range)
+					E: 47, // Mid-range value for E (43-52 range)
+					F: 58, // Mid-range value for F (53-63 range)
+					'F#': 69, // Mid-range value for F# (64-74 range)
+					G: 79, // Mid-range value for G (75-84 range)
+					'G#': 90, // Mid-range value for G# (85-95 range)
+					A: 100, // Mid-range value for A (96-105 range)
 					'A#': 111, // Mid-range value for A# (106-116 range)
-					'B': 122   // Mid-range value for B (117-127 range)
+					B: 122, // Mid-range value for B (117-127 range)
 				}
-				
+
 				let keyValue = keyMapping[opt.key] || 5
 				cmd.buffers = [Buffer.from([0xb0 + keyMidiCh, controlNum, keyValue])]
 				break
@@ -262,14 +260,14 @@ class ModuleInstance extends InstanceBase {
 				// Control Change message for UFX Unit Scale Parameter with CC value scaling
 				let scaleMidiCh = parseInt(opt.midiChannel) - 1 // Convert to 0-based
 				let scaleControlNum = parseInt(opt.controlNumber)
-				
+
 				// Map scale to CC value range (refer to protocol table)
 				let scaleMapping = {
-					'Major': 21,      // Mid-range value for Major (0-42 range)
-					'Minor': 63,      // Mid-range value for Minor (43-84 range)
-					'Chromatic': 106  // Mid-range value for Chromatic (85-127 range)
+					Major: 21, // Mid-range value for Major (0-42 range)
+					Minor: 63, // Mid-range value for Minor (43-84 range)
+					Chromatic: 106, // Mid-range value for Chromatic (85-127 range)
 				}
-				
+
 				let scaleValue = scaleMapping[opt.scale] || 21
 				cmd.buffers = [Buffer.from([0xb0 + scaleMidiCh, scaleControlNum, scaleValue])]
 				break
@@ -302,12 +300,18 @@ class ModuleInstance extends InstanceBase {
 
 		for (let i = 0; i < cmd.buffers.length; i++) {
 			if (cmd.port === this.config.midiPort && this.midiSocket !== undefined) {
-				this.log('debug', `sending ${cmd.buffers[i].toString('hex')} via MIDI @${this.config.host}:${this.config.midiPort}`)
+				this.log(
+					'debug',
+					`sending ${cmd.buffers[i].toString('hex')} via MIDI @${this.config.host}:${this.config.midiPort}`,
+				)
 				this.midiSocket.send(cmd.buffers[i]).catch((e) => {
 					this.log('error', `MIDI send error: ${e.message}`)
 				})
 			} else if (this.tcpSocket !== undefined) {
-				this.log('debug', `sending ${cmd.buffers[i].toString('hex')} via TCP @${this.config.host}:${this.config.tcpPort}`)
+				this.log(
+					'debug',
+					`sending ${cmd.buffers[i].toString('hex')} via TCP @${this.config.host}:${this.config.tcpPort}`,
+				)
 				this.tcpSocket.send(cmd.buffers[i]).catch((e) => {
 					this.log('error', `TCP send error: ${e.message}`)
 				})
@@ -475,7 +479,7 @@ class ModuleInstance extends InstanceBase {
 			model: 'dLive',
 			midiPort: 51328,
 			tcpPort: 51321,
-			midiChannel: 0
+			midiChannel: 0,
 		}
 
 		// Ensure port defaults are set even if config exists

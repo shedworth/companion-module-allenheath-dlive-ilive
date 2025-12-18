@@ -17,22 +17,14 @@
 			"email": "jeffrey.davidsz@vicreo.eu"
 		}
 	],
-	"legacyIds": [
-		"allenheath-dlive"
-	],
+	"legacyIds": ["allenheath-dlive"],
 	"runtime": {
 		"type": "node22",
 		"api": "nodejs-ipc",
 		"apiVersion": "1.4.0",
-		"entrypoint": "../index.js"
+		"entrypoint": "../dist/main.js"
 	},
 	"manufacturer": "Allen & Heath",
-	"products": [
-		"dLive",
-		"ilive"
-	],
-	"keywords": [
-		"Audio",
-		"Sound"
-	]
+	"products": ["dLive", "ilive"],
+	"keywords": ["Audio", "Sound"]
 }

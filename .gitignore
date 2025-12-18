@@ -1,5 +1,7 @@
-dLive-iLive (GitHub).code-workspace
-.DS_Store
+node_modules/
+package-lock.json
 /pkg
-/pkg.tgz
-node_modules
+/*.tgz
+/dist
+DEBUG-*
+/.vscode

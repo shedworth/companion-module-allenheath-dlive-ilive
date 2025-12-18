@@ -1,5 +1,3 @@
-const { combineRgb } = require('@companion-module/base')
-
 module.exports = {
 	/**
 	 * Get the available actions.
@@ -492,7 +490,7 @@ module.exports = {
 		}
 
 		// New Protocol V2.0 Actions
-		
+
 		// Scene Navigation
 		actions['scene_next'] = {
 			name: 'Scene Go Next',

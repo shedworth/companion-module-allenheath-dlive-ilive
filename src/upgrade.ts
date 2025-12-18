@@ -25,7 +25,7 @@ const upgradeScripts = [
 		}
 
 		let dcaChArr = []
-		
+
 		console.log('Running 1.0.x -> 1.2.0 Upgrade.')
 
 		for (let action of props.actions) {
@@ -71,5 +71,4 @@ const upgradeScripts = [
 	},
 ]
 
-module.exports = upgradeScripts
-
+export default upgradeScripts
