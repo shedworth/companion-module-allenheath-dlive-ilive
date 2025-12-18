@@ -1,6 +1,6 @@
 /**
  *
- * Companion instance class for the A&H dLive & iLive Mixers.
+ * Companion instance class for the A&H dLive Mixer.
  * @version 2.0.0
  *
  */
@@ -43,7 +43,7 @@ export class ModuleInstance extends InstanceBase {
 		let routingCmds = []
 		let start = isMute ? this.dcaCount : 0
 		let qty = isMute ? 8 : this.dcaCount
-		let chOfs = this.config.model == 'dLive' ? 0 : 0x20
+		let chOfs = 0
 		for (let i = start; i < start + qty; i++) {
 			let grpCode = i + (selArray.includes(`${i - start}`) ? 0x40 : 0)
 			routingCmds.push(Buffer.from([0xb0, 0x63, ch + chOfs, 0xb0, 0x62, 0x40, 0xb0, 0x06, grpCode]))
@@ -77,17 +77,17 @@ export class ModuleInstance extends InstanceBase {
 
 			case 'mute_mono_group':
 			case 'mute_stereo_group':
-				chOfs = this.config.model == 'dLive' ? 1 : 0
+				chOfs = 1
 				break
 
 			case 'mute_mono_aux':
 			case 'mute_stereo_aux':
-				chOfs = this.config.model == 'dLive' ? 2 : 0
+				chOfs = 2
 				break
 
 			case 'mute_mono_matrix':
 			case 'mute_stereo_matrix':
-				chOfs = this.config.model == 'dLive' ? 3 : 0
+				chOfs = 3
 				break
 
 			case 'mute_mono_fx_send':
@@ -97,7 +97,7 @@ export class ModuleInstance extends InstanceBase {
 			case 'mute_master':
 			case 'mute_ufx_send':
 			case 'mute_ufx_return':
-				chOfs = this.config.model == 'dLive' ? 4 : 0
+				chOfs = 4
 				break
 
 			case 'fader_input':
@@ -126,7 +126,7 @@ export class ModuleInstance extends InstanceBase {
 			case 'fader_fx_return':
 			case 'fader_ufx_send':
 			case 'fader_ufx_return':
-				chOfs = this.config.model == 'dLive' ? 4 : 0
+				chOfs = 4
 				break
 
 			case 'phantom':
@@ -333,7 +333,7 @@ export class ModuleInstance extends InstanceBase {
 				id: 'info',
 				width: 12,
 				label: 'Information',
-				value: 'This module is for the Allen & Heath dLive and iLive mixers',
+				value: 'This module is for the Allen & Heath dLive mixer',
 			},
 			{
 				type: 'textinput',
@@ -342,17 +342,6 @@ export class ModuleInstance extends InstanceBase {
 				width: 6,
 				default: '192.168.1.70',
 				regex: Regex.IP,
-			},
-			{
-				type: 'dropdown',
-				id: 'model',
-				label: 'Console Type',
-				width: 6,
-				default: 'dLive',
-				choices: [
-					{ id: 'dLive', label: 'dLive' },
-					{ id: 'iLive', label: 'iLive' },
-				],
 			},
 			{
 				type: 'number',
@@ -366,7 +355,7 @@ export class ModuleInstance extends InstanceBase {
 			{
 				type: 'number',
 				id: 'tcpPort',
-				label: 'TCP Port (dLive only)',
+				label: 'TCP Port',
 				width: 6,
 				default: 51321,
 				min: 1,
@@ -447,21 +436,19 @@ export class ModuleInstance extends InstanceBase {
 				this.log('debug', `MIDI Connected to ${this.config.host}`)
 			})
 
-			if (this.config.model == 'dLive') {
-				this.tcpSocket = new TCPHelper(this.config.host, this.config.tcpPort)
+			this.tcpSocket = new TCPHelper(this.config.host, this.config.tcpPort)
 
-				this.tcpSocket.on('status_change', (status, message) => {
-					this.updateStatus(status, message)
-				})
+			this.tcpSocket.on('status_change', (status, message) => {
+				this.updateStatus(status, message)
+			})
 
-				this.tcpSocket.on('error', (err) => {
-					this.log('error', 'TCP error: ' + err.message)
-				})
+			this.tcpSocket.on('error', (err) => {
+				this.log('error', 'TCP error: ' + err.message)
+			})
 
-				this.tcpSocket.on('connect', () => {
-					this.log('debug', `TCP Connected to ${this.config.host}`)
-				})
-			}
+			this.tcpSocket.on('connect', () => {
+				this.log('debug', `TCP Connected to ${this.config.host}`)
+			})
 		}
 	}
 
