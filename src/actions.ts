@@ -1,315 +1,394 @@
-module.exports = {
-	/**
-	 * Get the available actions.
-	 *
-	 * @returns {Object[]} the available actions
-	 * @access public
-	 * @since 1.2.0
-	 */
+import { times } from 'lodash/fp'
+import { ModuleInstance } from './main.js'
+import { SomeCompanionActionInputField } from '@companion-module/base'
 
-	getActionDefinitions() {
-		this.chCount = 128
-		this.dcaCount = 24
-		this.sceneCount = 500
+type OptionChoice = {
+	label: string
+	id: number
+}
 
-		let actions = {}
+type OptionGetterFn = (name: string, qty: number, ofs: number) => SomeCompanionActionInputField[]
 
-		this.CHOICES_INPUT_CHANNEL = []
-		for (let i = 0; i < this.chCount; i++) {
-			this.CHOICES_INPUT_CHANNEL.push({ label: `CH ${i + 1}`, id: i })
-		}
+const INPUT_CHANNEL_COUNT = 128
+const DCA_COUNT = 24
+const SCENE_COUNT = 500
+const MUTE_COUNT = 8
+const FADER_STEP_COUNT = 128
+const GAIN_STEP_COUNT = 128
 
-		this.CHOICES_SCENES = []
-		for (let i = 0; i < this.sceneCount; i++) {
-			this.CHOICES_SCENES.push({ label: `SCENE ${i + 1}`, id: i })
-		}
+const INPUT_CHANNEL_CHOICES: OptionChoice[] = times((id: number) => ({ label: `CH ${id + 1}`, id }))(
+	INPUT_CHANNEL_COUNT,
+)
 
-		this.CHOICES_DCA = []
-		for (let i = 0; i < this.dcaCount; i++) {
-			this.CHOICES_DCA.push({ label: `DCA ${i + 1}`, id: i })
-		}
+const SCENE_CHOICES: OptionChoice[] = times((id: number) => ({ label: `SCENE ${id + 1}`, id }))(SCENE_COUNT)
 
-		this.CHOICES_MUTE = []
-		for (let i = 0; i < 8; i++) {
-			this.CHOICES_MUTE.push({ label: `MUTE ${i + 1}`, id: i })
-		}
+const DCA_CHOICES: OptionChoice[] = times((id: number) => ({ label: `DCA ${id + 1}`, id }))(DCA_COUNT)
 
-		this.CHOICES_FADER = []
-		for (let i = 0; i < 128; i++) {
-			let dbVal = ((i - 107) / 2).toFixed(1)
-			let dbStr = i == 0 ? '-INF' : dbVal == 0 ? dbVal : dbVal > 0 ? `+${dbVal}` : `-${dbVal}`
-			this.CHOICES_FADER.push({ label: `${dbStr} dB`, id: i })
-		}
+const MUTE_CHOICES: OptionChoice[] = times((id: number) => ({ label: `MUTE ${id + 1}`, id }))(MUTE_COUNT)
 
-		this.muteOptions = (name, qty, ofs) => {
-			this.CHOICES = []
-			for (let i = 1; i <= qty; i++) {
-				this.CHOICES.push({ label: `${name} ${i}`, id: i + ofs })
-			}
-			return [
-				{
-					type: 'dropdown',
-					label: name,
-					id: 'strip',
-					default: 1 + ofs,
-					choices: this.CHOICES,
-					minChoicesForSearch: 0,
-				},
-				{
-					type: 'checkbox',
-					label: 'Mute',
-					id: 'mute',
-					default: true,
-				},
-			]
-		}
+const FADER_CHOICES: OptionChoice[] = times((id: number) => {
+	const dbVal = ((id - 107) / 2).toFixed(1)
+	// @ts-expect-error TODO - investigate later
+	const dbStr = id == 0 ? '-INF' : dbVal == 0 ? dbVal : dbVal > 0 ? `+${dbVal}` : `-${dbVal}`
+	return { label: `${dbStr} dB`, id }
+})(FADER_STEP_COUNT)
 
-		this.phantomOptions = (name, qty, ofs) => {
-			this.CHOICES = []
-			for (let i = 1; i <= qty; i++) {
-				this.CHOICES.push({ label: `${name} ${i}`, id: i + ofs })
-			}
-			return [
-				{
-					type: 'dropdown',
-					label: name,
-					id: 'strip',
-					default: 1 + ofs,
-					choices: this.CHOICES,
-					minChoicesForSearch: 0,
-				},
-				{
-					type: 'checkbox',
-					label: 'Phantom',
-					id: 'phantom',
-					default: true,
-				},
-			]
-		}
+// Preamp Gain Control
+const GAIN_CHOICES: OptionChoice[] = times((id: number) => {
+	const gainVal = ((id * 60) / 127 - 10).toFixed(1) // -10dB to +50dB range
+	// @ts-expect-error TODO - investigate later
+	const gainStr = gainVal == 0 ? '0' : gainVal > 0 ? `+${gainVal}` : gainVal
+	return { label: `${gainStr} dB`, id }
+})(GAIN_STEP_COUNT)
 
-		this.faderOptions = (name, qty, ofs) => {
-			this.CHOICES = []
-			for (let i = 1; i <= qty; i++) {
-				this.CHOICES.push({ label: `${name} ${i}`, id: i + ofs })
-			}
-			return [
-				{
-					type: 'dropdown',
-					label: name,
-					id: 'strip',
-					default: 1 + ofs,
-					choices: this.CHOICES,
-					minChoicesForSearch: 0,
-				},
-				{
-					type: 'dropdown',
-					label: 'Level',
-					id: 'level',
-					default: 0,
-					choices: this.CHOICES_FADER,
-					minChoicesForSearch: 0,
-				},
-			]
-		}
+// High Pass Filter Control
+const HPF_CHOICES = [
+	{ label: 'Off', id: 0 },
+	{ label: '20 Hz', id: 1 },
+	{ label: '25 Hz', id: 2 },
+	{ label: '31.5 Hz', id: 3 },
+	{ label: '40 Hz', id: 4 },
+	{ label: '50 Hz', id: 5 },
+	{ label: '63 Hz', id: 6 },
+	{ label: '80 Hz', id: 7 },
+	{ label: '100 Hz', id: 8 },
+	{ label: '125 Hz', id: 9 },
+	{ label: '160 Hz', id: 10 },
+	{ label: '200 Hz', id: 11 },
+	{ label: '250 Hz', id: 12 },
+	{ label: '315 Hz', id: 13 },
+	{ label: '400 Hz', id: 14 },
+]
 
-		actions['mute_input'] = {
+// UFX Global Key Control
+const UFX_KEY_CHOICES = [
+	{ label: 'C', id: 0x00 },
+	{ label: 'C#', id: 0x01 },
+	{ label: 'D', id: 0x02 },
+	{ label: 'D#', id: 0x03 },
+	{ label: 'E', id: 0x04 },
+	{ label: 'F', id: 0x05 },
+	{ label: 'F#', id: 0x06 },
+	{ label: 'G', id: 0x07 },
+	{ label: 'G#', id: 0x08 },
+	{ label: 'A', id: 0x09 },
+	{ label: 'A#', id: 0x0a },
+	{ label: 'B', id: 0x0b },
+]
+
+// UFX Global Scale Control
+const UFX_SCALE_CHOICES = [
+	{ label: 'Major', id: 0x00 },
+	{ label: 'Minor', id: 0x01 },
+]
+
+const getMuteOptions: OptionGetterFn = (name, qty, ofs) => {
+	const CHOICES = []
+	for (let i = 1; i <= qty; i++) {
+		CHOICES.push({ label: `${name} ${i}`, id: i + ofs })
+	}
+
+	return [
+		{
+			type: 'dropdown',
+			label: name,
+			id: 'strip',
+			default: 1 + ofs,
+			choices: CHOICES,
+			minChoicesForSearch: 0,
+		},
+		{
+			type: 'checkbox',
+			label: 'Mute',
+			id: 'mute',
+			default: true,
+		},
+	]
+}
+
+const getPhantomOptions: OptionGetterFn = (name, qty, ofs) => {
+	const CHOICES = []
+	for (let i = 1; i <= qty; i++) {
+		CHOICES.push({ label: `${name} ${i}`, id: i + ofs })
+	}
+
+	return [
+		{
+			type: 'dropdown',
+			label: name,
+			id: 'strip',
+			default: 1 + ofs,
+			choices: CHOICES,
+			minChoicesForSearch: 0,
+		},
+		{
+			type: 'checkbox',
+			label: 'Phantom',
+			id: 'phantom',
+			default: true,
+		},
+	]
+}
+
+const getFaderOptions: OptionGetterFn = (name, qty, ofs) => {
+	const CHOICES = []
+	for (let i = 1; i <= qty; i++) {
+		CHOICES.push({ label: `${name} ${i}`, id: i + ofs })
+	}
+
+	return [
+		{
+			type: 'dropdown',
+			label: name,
+			id: 'strip',
+			default: 1 + ofs,
+			choices: CHOICES,
+			minChoicesForSearch: 0,
+		},
+		{
+			type: 'dropdown',
+			label: 'Level',
+			id: 'level',
+			default: 0,
+			choices: FADER_CHOICES,
+			minChoicesForSearch: 0,
+		},
+	]
+}
+
+// Send Level Controls
+const getSendLevelOptions: OptionGetterFn = (name, qty, ofs) => {
+	const CHOICES = []
+	for (let i = 1; i <= qty; i++) {
+		CHOICES.push({ label: `${name} ${i}`, id: i + ofs })
+	}
+	return [
+		{
+			type: 'dropdown',
+			label: 'Input Channel',
+			id: 'inputChannel',
+			default: 0,
+			choices: INPUT_CHANNEL_CHOICES,
+			minChoicesForSearch: 0,
+		},
+		{
+			type: 'dropdown',
+			label: name,
+			id: 'send',
+			default: 1 + ofs,
+			choices: CHOICES,
+			minChoicesForSearch: 0,
+		},
+		{
+			type: 'dropdown',
+			label: 'Send Level',
+			id: 'level',
+			default: 0,
+			choices: FADER_CHOICES,
+			minChoicesForSearch: 0,
+		},
+	]
+}
+
+export function UpdateActions(self: ModuleInstance): void {
+	self.setActionDefinitions({
+		mute_input: {
 			name: 'Mute Input',
-			options: this.muteOptions('Input Channel', 128, -1),
+			options: getMuteOptions('Input Channel', 128, -1),
 			callback: async (action) => {
-				this.sendAction('mute_input', action.options)
+				self.sendAction('mute_input', action.options)
 			},
-		}
-		actions['mute_mono_group'] = {
+		},
+		mute_mono_group: {
 			name: 'Mute Mono Group',
-			options: this.muteOptions('Mono Group', 62, -1),
+			options: getMuteOptions('Mono Group', 62, -1),
 			callback: async (action) => {
-				this.sendAction('mute_mono_group', action.options)
+				self.sendAction('mute_mono_group', action.options)
 			},
-		}
-		actions['mute_stereo_group'] = {
+		},
+		mute_stereo_group: {
 			name: 'Mute Stereo Group',
-			options: this.muteOptions('Stereo Group', 31, 0x3f),
+			options: getMuteOptions('Stereo Group', 31, 0x3f),
 			callback: async (action) => {
-				this.sendAction('mute_stereo_group', action.options)
+				self.sendAction('mute_stereo_group', action.options)
 			},
-		}
-		actions['mute_mono_aux'] = {
+		},
+		mute_mono_aux: {
 			name: 'Mute Mono Aux',
-			options: this.muteOptions('Mono Aux', 62, -1),
+			options: getMuteOptions('Mono Aux', 62, -1),
 			callback: async (action) => {
-				this.sendAction('mute_mono_aux', action.options)
+				self.sendAction('mute_mono_aux', action.options)
 			},
-		}
-		actions['mute_stereo_aux'] = {
+		},
+		mute_stereo_aux: {
 			name: 'Mute Stereo Aux',
-			options: this.muteOptions('Stereo Aux', 31, 0x3f),
+			options: getMuteOptions('Stereo Aux', 31, 0x3f),
 			callback: async (action) => {
-				this.sendAction('mute_stereo_aux', action.options)
+				self.sendAction('mute_stereo_aux', action.options)
 			},
-		}
-		actions['mute_mono_matrix'] = {
+		},
+		mute_mono_matrix: {
 			name: 'Mute Mono Matrix',
-			options: this.muteOptions('Mono Matrix', 62, -1),
+			options: getMuteOptions('Mono Matrix', 62, -1),
 			callback: async (action) => {
-				this.sendAction('mute_mono_matrix', action.options)
+				self.sendAction('mute_mono_matrix', action.options)
 			},
-		}
-		actions['mute_stereo_matrix'] = {
+		},
+		mute_stereo_matrix: {
 			name: 'Mute Stereo Matrix',
-			options: this.muteOptions('Stereo Matrix', 31, 0x3f),
+			options: getMuteOptions('Stereo Matrix', 31, 0x3f),
 			callback: async (action) => {
-				this.sendAction('mute_stereo_matrix', action.options)
+				self.sendAction('mute_stereo_matrix', action.options)
 			},
-		}
-		actions['mute_mono_fx_send'] = {
+		},
+		mute_mono_fx_send: {
 			name: 'Mute Mono FX Send',
-			options: this.muteOptions('Mono FX Send', 16, -1),
+			options: getMuteOptions('Mono FX Send', 16, -1),
 			callback: async (action) => {
-				this.sendAction('mute_mono_fx_send', action.options)
+				self.sendAction('mute_mono_fx_send', action.options)
 			},
-		}
-		actions['mute_stereo_fx_send'] = {
+		},
+		mute_stereo_fx_send: {
 			name: 'Mute Stereo FX Send',
-			options: this.muteOptions('Stereo FX Send', 16, 0x0f),
+			options: getMuteOptions('Stereo FX Send', 16, 0x0f),
 			callback: async (action) => {
-				this.sendAction('mute_stereo_fx_send', action.options)
+				self.sendAction('mute_stereo_fx_send', action.options)
 			},
-		}
-		actions['mute_fx_return'] = {
+		},
+		mute_fx_return: {
 			name: 'Mute FX Return',
-			options: this.muteOptions('FX Return', 16, 0x1f),
+			options: getMuteOptions('FX Return', 16, 0x1f),
 			callback: async (action) => {
-				this.sendAction('mute_fx_return', action.options)
+				self.sendAction('mute_fx_return', action.options)
 			},
-		}
-		actions['mute_master'] = {
+		},
+		mute_master: {
 			name: 'Mute Group Master',
-			options: this.muteOptions('Mute Group Master', 8, 0x4d),
+			options: getMuteOptions('Mute Group Master', 8, 0x4d),
 			callback: async (action) => {
-				this.sendAction('mute_master', action.options)
+				self.sendAction('mute_master', action.options)
 			},
-		}
-		actions['mute_dca'] = {
+		},
+		mute_dca: {
 			name: 'Mute DCA',
-			options: this.muteOptions('DCA', 24, 0x35),
+			options: getMuteOptions('DCA', 24, 0x35),
 			callback: async (action) => {
-				this.sendAction('mute_dca', action.options)
+				self.sendAction('mute_dca', action.options)
 			},
-		}
-		actions['mute_ufx_send'] = {
+		},
+		mute_ufx_send: {
 			name: 'Mute UFX Stereo Send',
-			options: this.muteOptions('UFX Stereo Send', 8, 0x55),
+			options: getMuteOptions('UFX Stereo Send', 8, 0x55),
 			callback: async (action) => {
-				this.sendAction('mute_ufx_send', action.options)
+				self.sendAction('mute_ufx_send', action.options)
 			},
-		}
-		actions['mute_ufx_return'] = {
+		},
+		mute_ufx_return: {
 			name: 'Mute UFX Stereo Return',
-			options: this.muteOptions('UFX Stereo Return', 8, 0x5d),
+			options: getMuteOptions('UFX Stereo Return', 8, 0x5d),
 			callback: async (action) => {
-				this.sendAction('mute_ufx_return', action.options)
+				self.sendAction('mute_ufx_return', action.options)
 			},
-		}
-		actions['fader_input'] = {
+		},
+		fader_input: {
 			name: 'Set Input Fader to Level',
-			options: this.faderOptions('Channel', 128, -1),
+			options: getFaderOptions('Channel', 128, -1),
 			callback: async (action) => {
-				this.sendAction('fader_input', action.options)
+				self.sendAction('fader_input', action.options)
 			},
-		}
-		actions['fader_mono_group'] = {
+		},
+		fader_mono_group: {
 			name: 'Set Mono Group Master Fader to Level',
-			options: this.faderOptions('Mono Group', 62, -1),
+			options: getFaderOptions('Mono Group', 62, -1),
 			callback: async (action) => {
-				this.sendAction('fader_mono_group', action.options)
+				self.sendAction('fader_mono_group', action.options)
 			},
-		}
-		actions['fader_stereo_group'] = {
+		},
+		fader_stereo_group: {
 			name: 'Set Stereo Group Master Fader to Level',
-			options: this.faderOptions('Stereo Group', 31, 0x3f),
+			options: getFaderOptions('Stereo Group', 31, 0x3f),
 			callback: async (action) => {
-				this.sendAction('fader_stereo_group', action.options)
+				self.sendAction('fader_stereo_group', action.options)
 			},
-		}
-		actions['fader_mono_aux'] = {
+		},
+		fader_mono_aux: {
 			name: 'Set Mono Aux Master Fader to Level',
-			options: this.faderOptions('Mono Aux', 62, -1),
+			options: getFaderOptions('Mono Aux', 62, -1),
 			callback: async (action) => {
-				this.sendAction('fader_mono_aux', action.options)
+				self.sendAction('fader_mono_aux', action.options)
 			},
-		}
-		actions['fader_stereo_aux'] = {
+		},
+		fader_stereo_aux: {
 			name: 'Set Stereo Aux Master Fader to Level',
-			options: this.faderOptions('Stereo Aux', 31, 0x3f),
+			options: getFaderOptions('Stereo Aux', 31, 0x3f),
 			callback: async (action) => {
-				this.sendAction('fader_stereo_aux', action.options)
+				self.sendAction('fader_stereo_aux', action.options)
 			},
-		}
-		actions['fader_mono_matrix'] = {
+		},
+		fader_mono_matrix: {
 			name: 'Set Mono Matrix Master Fader to Level',
-			options: this.faderOptions('Mono Matrix', 62, -1),
+			options: getFaderOptions('Mono Matrix', 62, -1),
 			callback: async (action) => {
-				this.sendAction('fader_mono_matrix', action.options)
+				self.sendAction('fader_mono_matrix', action.options)
 			},
-		}
-		actions['fader_stereo_matrix'] = {
+		},
+		fader_stereo_matrix: {
 			name: 'Set Stereo Matrix Master Fader to Level',
-			options: this.faderOptions('Stereo Matrix', 31, 0x3f),
+			options: getFaderOptions('Stereo Matrix', 31, 0x3f),
 			callback: async (action) => {
-				this.sendAction('fader_stereo_matrix', action.options)
+				self.sendAction('fader_stereo_matrix', action.options)
 			},
-		}
-		actions['fader_mono_fx_send'] = {
+		},
+		fader_mono_fx_send: {
 			name: 'Set Mono FX Send Master Fader to Level',
-			options: this.faderOptions('Mono FX Send', 16, -1),
+			options: getFaderOptions('Mono FX Send', 16, -1),
 			callback: async (action) => {
-				this.sendAction('fader_mono_fx_send', action.options)
+				self.sendAction('fader_mono_fx_send', action.options)
 			},
-		}
-		actions['fader_stereo_fx_send'] = {
+		},
+		fader_stereo_fx_send: {
 			name: 'Set Stereo FX Send Master Fader to Level',
-			options: this.faderOptions('Stereo FX Send', 16, 0x0f),
+			options: getFaderOptions('Stereo FX Send', 16, 0x0f),
 			callback: async (action) => {
-				this.sendAction('fader_stereo_fx_send', action.options)
+				self.sendAction('fader_stereo_fx_send', action.options)
 			},
-		}
-		actions['fader_fx_return'] = {
+		},
+		fader_fx_return: {
 			name: 'Set FX Return Fader to Level',
-			options: this.faderOptions('FX Return', 16, 0x1f),
+			options: getFaderOptions('FX Return', 16, 0x1f),
 			callback: async (action) => {
-				this.sendAction('fader_fx_return', action.options)
+				self.sendAction('fader_fx_return', action.options)
 			},
-		}
-		actions['fader_DCA'] = {
+		},
+		fader_DCA: {
 			name: 'Set DCA Fader to Level',
-			options: this.faderOptions('DCA', 24, 0x35),
+			options: getFaderOptions('DCA', 24, 0x35),
 			callback: async (action) => {
-				this.sendAction('fader_DCA', action.options)
+				self.sendAction('fader_DCA', action.options)
 			},
-		}
-		actions['fader_ufx_send'] = {
+		},
+		fader_ufx_send: {
 			name: 'Set UFX Stereo Send Fader to Level',
-			options: this.faderOptions('UFX Stereo Send', 8, 0x55),
+			options: getFaderOptions('UFX Stereo Send', 8, 0x55),
 			callback: async (action) => {
-				this.sendAction('fader_ufx_send', action.options)
+				self.sendAction('fader_ufx_send', action.options)
 			},
-		}
-		actions['fader_ufx_return'] = {
+		},
+		fader_ufx_return: {
 			name: 'Set UFX Stereo Return Fader to Level',
-			options: this.faderOptions('UFX Stereo Return', 8, 0x5d),
+			options: getFaderOptions('UFX Stereo Return', 8, 0x5d),
 			callback: async (action) => {
-				this.sendAction('fader_ufx_return', action.options)
+				self.sendAction('fader_ufx_return', action.options)
 			},
-		}
-		actions['phantom'] = {
+		},
+		phantom: {
 			name: 'Toggle 48v Phantom on Preamp',
-			options: this.phantomOptions('Preamp', this.chCount, -1),
+			options: getPhantomOptions('Preamp', INPUT_CHANNEL_COUNT, -1),
 			callback: async (action) => {
-				this.sendAction('phantom', action.options)
+				self.sendAction('phantom', action.options)
 			},
-		}
-
-		actions['dca_assign'] = {
+		},
+		dca_assign: {
 			name: 'Assign DCA Groups for channel',
 			options: [
 				{
@@ -317,7 +396,7 @@ module.exports = {
 					label: 'Input Channel',
 					id: 'inputChannel',
 					default: '0',
-					choices: this.CHOICES_INPUT_CHANNEL,
+					choices: INPUT_CHANNEL_CHOICES,
 					minChoicesForSearch: 0,
 				},
 				{
@@ -325,15 +404,14 @@ module.exports = {
 					label: 'DCA',
 					id: 'dcaGroup',
 					default: [],
-					choices: this.CHOICES_DCA,
+					choices: DCA_CHOICES,
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('dca_assign', action.options)
+				self.sendAction('dca_assign', action.options)
 			},
-		}
-
-		actions['mute_assign'] = {
+		},
+		mute_assign: {
 			name: 'Assign Mute Groups for channel',
 			options: [
 				{
@@ -341,7 +419,7 @@ module.exports = {
 					label: 'Input Channel',
 					id: 'inputChannel',
 					default: '0',
-					choices: this.CHOICES_INPUT_CHANNEL,
+					choices: INPUT_CHANNEL_CHOICES,
 					minChoicesForSearch: 0,
 				},
 				{
@@ -349,15 +427,14 @@ module.exports = {
 					label: 'MUTE',
 					id: 'muteGroup',
 					default: [],
-					choices: this.CHOICES_MUTE,
+					choices: MUTE_CHOICES,
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('mute_assign', action.options)
+				self.sendAction('mute_assign', action.options)
 			},
-		}
-
-		actions['vsc'] = {
+		},
+		vsc: {
 			name: 'Virtual Soundcheck',
 			options: [
 				{
@@ -373,11 +450,10 @@ module.exports = {
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('vsc', action.options)
+				self.sendAction('vsc', action.options)
 			},
-		}
-
-		actions['talkback_on'] = {
+		},
+		talkback_on: {
 			name: 'Talkback On',
 			options: [
 				{
@@ -388,11 +464,10 @@ module.exports = {
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('talkback_on', action.options)
+				self.sendAction('talkback_on', action.options)
 			},
-		}
-
-		actions['scene_recall'] = {
+		},
+		scene_recall: {
 			name: 'Scene recall',
 			options: [
 				{
@@ -400,36 +475,29 @@ module.exports = {
 					label: 'Scene Number',
 					id: 'sceneNumber',
 					default: '0',
-					choices: this.CHOICES_SCENES,
+					choices: SCENE_CHOICES,
 					minChoicesForSearch: 0,
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('scene_recall', action.options)
+				self.sendAction('scene_recall', action.options)
 			},
-		}
-
-		// New Protocol V2.0 Actions
-
-		// Scene Navigation
-		actions['scene_next'] = {
+		},
+		scene_next: {
 			name: 'Scene Go Next',
 			options: [],
 			callback: async (action) => {
-				this.sendAction('scene_next', action.options)
+				self.sendAction('scene_next', action.options)
 			},
-		}
-
-		actions['scene_previous'] = {
+		},
+		scene_previous: {
 			name: 'Scene Go Previous',
 			options: [],
 			callback: async (action) => {
-				this.sendAction('scene_previous', action.options)
+				self.sendAction('scene_previous', action.options)
 			},
-		}
-
-		// Solo Controls
-		actions['solo_input'] = {
+		},
+		solo_input: {
 			name: 'Solo Input Channel',
 			options: [
 				{
@@ -437,7 +505,7 @@ module.exports = {
 					label: 'Input Channel',
 					id: 'strip',
 					default: 0,
-					choices: this.CHOICES_INPUT_CHANNEL,
+					choices: INPUT_CHANNEL_CHOICES,
 					minChoicesForSearch: 0,
 				},
 				{
@@ -448,12 +516,10 @@ module.exports = {
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('solo_input', action.options)
+				self.sendAction('solo_input', action.options)
 			},
-		}
-
-		// EQ Controls
-		actions['eq_enable_input'] = {
+		},
+		eq_enable_input: {
 			name: 'EQ Enable/Disable Input Channel',
 			options: [
 				{
@@ -461,7 +527,7 @@ module.exports = {
 					label: 'Input Channel',
 					id: 'strip',
 					default: 0,
-					choices: this.CHOICES_INPUT_CHANNEL,
+					choices: INPUT_CHANNEL_CHOICES,
 					minChoicesForSearch: 0,
 				},
 				{
@@ -472,19 +538,10 @@ module.exports = {
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('eq_enable_input', action.options)
+				self.sendAction('eq_enable_input', action.options)
 			},
-		}
-
-		// Preamp Gain Control
-		this.CHOICES_GAIN = []
-		for (let i = 0; i <= 127; i++) {
-			let gainVal = ((i * 60) / 127 - 10).toFixed(1) // -10dB to +50dB range
-			let gainStr = gainVal == 0 ? '0' : gainVal > 0 ? `+${gainVal}` : gainVal
-			this.CHOICES_GAIN.push({ label: `${gainStr} dB`, id: i })
-		}
-
-		actions['preamp_gain'] = {
+		},
+		preamp_gain: {
 			name: 'Set Preamp Gain',
 			options: [
 				{
@@ -492,7 +549,7 @@ module.exports = {
 					label: 'Input Channel',
 					id: 'strip',
 					default: 0,
-					choices: this.CHOICES_INPUT_CHANNEL,
+					choices: INPUT_CHANNEL_CHOICES,
 					minChoicesForSearch: 0,
 				},
 				{
@@ -500,17 +557,15 @@ module.exports = {
 					label: 'Gain Level',
 					id: 'gain',
 					default: 42, // Approximately 0dB
-					choices: this.CHOICES_GAIN,
+					choices: GAIN_CHOICES,
 					minChoicesForSearch: 0,
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('preamp_gain', action.options)
+				self.sendAction('preamp_gain', action.options)
 			},
-		}
-
-		// Preamp Pad Control
-		actions['preamp_pad'] = {
+		},
+		preamp_pad: {
 			name: 'Toggle Preamp Pad',
 			options: [
 				{
@@ -518,7 +573,7 @@ module.exports = {
 					label: 'Input Channel',
 					id: 'strip',
 					default: 0,
-					choices: this.CHOICES_INPUT_CHANNEL,
+					choices: INPUT_CHANNEL_CHOICES,
 					minChoicesForSearch: 0,
 				},
 				{
@@ -529,30 +584,10 @@ module.exports = {
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('preamp_pad', action.options)
+				self.sendAction('preamp_pad', action.options)
 			},
-		}
-
-		// High Pass Filter Control
-		this.CHOICES_HPF = [
-			{ label: 'Off', id: 0 },
-			{ label: '20 Hz', id: 1 },
-			{ label: '25 Hz', id: 2 },
-			{ label: '31.5 Hz', id: 3 },
-			{ label: '40 Hz', id: 4 },
-			{ label: '50 Hz', id: 5 },
-			{ label: '63 Hz', id: 6 },
-			{ label: '80 Hz', id: 7 },
-			{ label: '100 Hz', id: 8 },
-			{ label: '125 Hz', id: 9 },
-			{ label: '160 Hz', id: 10 },
-			{ label: '200 Hz', id: 11 },
-			{ label: '250 Hz', id: 12 },
-			{ label: '315 Hz', id: 13 },
-			{ label: '400 Hz', id: 14 },
-		]
-
-		actions['hpf_control'] = {
+		},
+		hpf_control: {
 			name: 'Set High Pass Filter',
 			options: [
 				{
@@ -560,7 +595,7 @@ module.exports = {
 					label: 'Input Channel',
 					id: 'strip',
 					default: 0,
-					choices: this.CHOICES_INPUT_CHANNEL,
+					choices: INPUT_CHANNEL_CHOICES,
 					minChoicesForSearch: 0,
 				},
 				{
@@ -568,122 +603,63 @@ module.exports = {
 					label: 'HPF Frequency',
 					id: 'frequency',
 					default: 0,
-					choices: this.CHOICES_HPF,
+					choices: HPF_CHOICES,
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('hpf_control', action.options)
+				self.sendAction('hpf_control', action.options)
 			},
-		}
-
-		// Send Level Controls
-		this.sendLevelOptions = (name, qty, ofs) => {
-			this.CHOICES = []
-			for (let i = 1; i <= qty; i++) {
-				this.CHOICES.push({ label: `${name} ${i}`, id: i + ofs })
-			}
-			return [
-				{
-					type: 'dropdown',
-					label: 'Input Channel',
-					id: 'inputChannel',
-					default: 0,
-					choices: this.CHOICES_INPUT_CHANNEL,
-					minChoicesForSearch: 0,
-				},
-				{
-					type: 'dropdown',
-					label: name,
-					id: 'send',
-					default: 1 + ofs,
-					choices: this.CHOICES,
-					minChoicesForSearch: 0,
-				},
-				{
-					type: 'dropdown',
-					label: 'Send Level',
-					id: 'level',
-					default: 0,
-					choices: this.CHOICES_FADER,
-					minChoicesForSearch: 0,
-				},
-			]
-		}
-
-		actions['send_aux_mono'] = {
+		},
+		send_aux_mono: {
 			name: 'Set Aux Mono Send Level',
-			options: this.sendLevelOptions('Mono Aux', 62, -1),
+			options: getSendLevelOptions('Mono Aux', 62, -1),
 			callback: async (action) => {
-				this.sendAction('send_aux_mono', action.options)
+				self.sendAction('send_aux_mono', action.options)
 			},
-		}
-
-		actions['send_aux_stereo'] = {
+		},
+		send_aux_stereo: {
 			name: 'Set Aux Stereo Send Level',
-			options: this.sendLevelOptions('Stereo Aux', 31, 0x3f),
+			options: getSendLevelOptions('Stereo Aux', 31, 0x3f),
 			callback: async (action) => {
-				this.sendAction('send_aux_stereo', action.options)
+				self.sendAction('send_aux_stereo', action.options)
 			},
-		}
-
-		actions['send_fx_mono'] = {
+		},
+		send_fx_mono: {
 			name: 'Set FX Mono Send Level',
-			options: this.sendLevelOptions('Mono FX', 16, -1),
+			options: getSendLevelOptions('Mono FX', 16, -1),
 			callback: async (action) => {
-				this.sendAction('send_fx_mono', action.options)
+				self.sendAction('send_fx_mono', action.options)
 			},
-		}
-
-		actions['send_fx_stereo'] = {
+		},
+		send_fx_stereo: {
 			name: 'Set FX Stereo Send Level',
-			options: this.sendLevelOptions('Stereo FX', 16, 0x0f),
+			options: getSendLevelOptions('Stereo FX', 16, 0x0f),
 			callback: async (action) => {
-				this.sendAction('send_fx_stereo', action.options)
+				self.sendAction('send_fx_stereo', action.options)
 			},
-		}
-
-		actions['send_matrix_mono'] = {
+		},
+		send_matrix_mono: {
 			name: 'Set Matrix Mono Send Level',
-			options: this.sendLevelOptions('Mono Matrix', 62, -1),
+			options: getSendLevelOptions('Mono Matrix', 62, -1),
 			callback: async (action) => {
-				this.sendAction('send_matrix_mono', action.options)
+				self.sendAction('send_matrix_mono', action.options)
 			},
-		}
-
-		actions['send_matrix_stereo'] = {
+		},
+		send_matrix_stereo: {
 			name: 'Set Matrix Stereo Send Level',
-			options: this.sendLevelOptions('Stereo Matrix', 31, 0x3f),
+			options: getSendLevelOptions('Stereo Matrix', 31, 0x3f),
 			callback: async (action) => {
-				this.sendAction('send_matrix_stereo', action.options)
+				self.sendAction('send_matrix_stereo', action.options)
 			},
-		}
-
-		// UFX Send Level Controls
-		actions['send_ufx'] = {
+		},
+		send_ufx: {
 			name: 'Set UFX Stereo Send Level',
-			options: this.sendLevelOptions('UFX Stereo Send', 8, 0x55),
+			options: getSendLevelOptions('UFX Stereo Send', 8, 0x55),
 			callback: async (action) => {
-				this.sendAction('send_ufx', action.options)
+				self.sendAction('send_ufx', action.options)
 			},
-		}
-
-		// UFX Global Key Control
-		this.CHOICES_UFX_KEY = [
-			{ label: 'C', id: 0x00 },
-			{ label: 'C#', id: 0x01 },
-			{ label: 'D', id: 0x02 },
-			{ label: 'D#', id: 0x03 },
-			{ label: 'E', id: 0x04 },
-			{ label: 'F', id: 0x05 },
-			{ label: 'F#', id: 0x06 },
-			{ label: 'G', id: 0x07 },
-			{ label: 'G#', id: 0x08 },
-			{ label: 'A', id: 0x09 },
-			{ label: 'A#', id: 0x0a },
-			{ label: 'B', id: 0x0b },
-		]
-
-		actions['ufx_global_key'] = {
+		},
+		ufx_global_key: {
 			name: 'Set UFX Global Key',
 			options: [
 				{
@@ -691,21 +667,14 @@ module.exports = {
 					label: 'Key',
 					id: 'key',
 					default: 0x00,
-					choices: this.CHOICES_UFX_KEY,
+					choices: UFX_KEY_CHOICES,
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('ufx_global_key', action.options)
+				self.sendAction('ufx_global_key', action.options)
 			},
-		}
-
-		// UFX Global Scale Control
-		this.CHOICES_UFX_SCALE = [
-			{ label: 'Major', id: 0x00 },
-			{ label: 'Minor', id: 0x01 },
-		]
-
-		actions['ufx_global_scale'] = {
+		},
+		ufx_global_scale: {
 			name: 'Set UFX Global Scale',
 			options: [
 				{
@@ -713,16 +682,14 @@ module.exports = {
 					label: 'Scale',
 					id: 'scale',
 					default: 0x00,
-					choices: this.CHOICES_UFX_SCALE,
+					choices: UFX_SCALE_CHOICES,
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('ufx_global_scale', action.options)
+				self.sendAction('ufx_global_scale', action.options)
 			},
-		}
-
-		// UFX Unit Parameter Control
-		actions['ufx_unit_parameter'] = {
+		},
+		ufx_unit_parameter: {
 			name: 'Set UFX Unit Parameter',
 			options: [
 				{
@@ -751,12 +718,10 @@ module.exports = {
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('ufx_unit_parameter', action.options)
+				self.sendAction('ufx_unit_parameter', action.options)
 			},
-		}
-
-		// UFX Unit Key Parameter (with CC value scaling)
-		actions['ufx_unit_key'] = {
+		},
+		ufx_unit_key: {
 			name: 'Set UFX Unit Key Parameter',
 			options: [
 				{
@@ -797,12 +762,10 @@ module.exports = {
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('ufx_unit_key', action.options)
+				self.sendAction('ufx_unit_key', action.options)
 			},
-		}
-
-		// UFX Unit Scale Parameter (with CC value scaling)
-		actions['ufx_unit_scale'] = {
+		},
+		ufx_unit_scale: {
 			name: 'Set UFX Unit Scale Parameter',
 			options: [
 				{
@@ -834,12 +797,10 @@ module.exports = {
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('ufx_unit_scale', action.options)
+				self.sendAction('ufx_unit_scale', action.options)
 			},
-		}
-
-		// Input to Main Assignment
-		actions['input_to_main'] = {
+		},
+		input_to_main: {
 			name: 'Input to Main Assign',
 			options: [
 				{
@@ -847,7 +808,7 @@ module.exports = {
 					label: 'Input Channel',
 					id: 'strip',
 					default: 0,
-					choices: this.CHOICES_INPUT_CHANNEL,
+					choices: INPUT_CHANNEL_CHOICES,
 					minChoicesForSearch: 0,
 				},
 				{
@@ -858,10 +819,8 @@ module.exports = {
 				},
 			],
 			callback: async (action) => {
-				this.sendAction('input_to_main', action.options)
+				self.sendAction('input_to_main', action.options)
 			},
-		}
-
-		return actions
-	},
+		},
+	})
 }

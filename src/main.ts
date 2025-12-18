@@ -6,15 +6,17 @@
  */
 
 import { InstanceBase, Regex, runEntrypoint, TCPHelper } from '@companion-module/base'
-import * as actions from './actions'
-import upgradeScripts from './upgrade'
+import { UpdateActions } from './actions.js'
+import upgradeScripts from './upgrade.js'
 
-/**
- * @extends InstanceBase
- * @since 2.0.0
- */
+type DLiveModuleConfig = {
+	host: string
+	port: number
+	midiPort: number
+	midiChannel: number
+}
 
-export class ModuleInstance extends InstanceBase {
+export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 	/**
 	 * Create an instance.
 	 *
@@ -23,10 +25,6 @@ export class ModuleInstance extends InstanceBase {
 	 */
 	constructor(internal) {
 		super(internal)
-
-		Object.assign(this, {
-			...actions,
-		})
 	}
 
 	/**
@@ -36,7 +34,8 @@ export class ModuleInstance extends InstanceBase {
 	 * @since 2.0.0
 	 */
 	updateActions() {
-		this.setActionDefinitions(this.getActionDefinitions())
+		// this.setActionDefinitions(this.getActionDefinitions())
+		UpdateActions(this)
 	}
 
 	setRouting(ch, selArray, isMute) {

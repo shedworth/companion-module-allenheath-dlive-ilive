@@ -7,8 +7,6 @@
 		"baseUrl": "./",
 		"paths": {
 			"*": ["./node_modules/*"]
-		},
-		"module": "Node16",
-		"moduleResolution": "Node16"
+		}
 	}
 }
