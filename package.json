@@ -29,7 +29,8 @@
 	},
 	"dependencies": {
 		"@companion-module/base": "^1.4.0",
-		"lodash": "^4.17.21"
+		"lodash": "^4.17.21",
+		"zod": "^4.2.1"
 	},
 	"devDependencies": {
 		"@companion-module/tools": "^2.3.0",

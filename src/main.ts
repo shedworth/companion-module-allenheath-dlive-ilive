@@ -5,65 +5,197 @@
  *
  */
 
-import { InstanceBase, Regex, runEntrypoint, TCPHelper } from '@companion-module/base'
-import { UpdateActions } from './actions.js'
+import { InstanceBase, Regex, runEntrypoint, SomeCompanionConfigField, TCPHelper } from '@companion-module/base'
+import { _UpdateActions } from './actions.js'
 import upgradeScripts from './upgrade.js'
+import { DCA_COUNT, SYSEX_HEADER } from './constants.js'
+import { stringToSysExBytes } from './utils/stringToSysExBytes.js'
+import { getMidiOffsetsForChannelType } from './utils/getMidiOffsetsForChannelType.js'
 
 type DLiveModuleConfig = {
 	host: string
-	port: number
-	midiPort: number
 	midiChannel: number
+	midiPort: number
+	tcpPort: number
 }
 
 export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
-	/**
-	 * Create an instance.
-	 *
-	 * @param {unknown} internal - the internal instance object
-	 * @since 2.0.0
-	 */
-	constructor(internal) {
+	config!: DLiveModuleConfig
+	tcpSocket?: TCPHelper
+	midiSocket?: TCPHelper
+
+	constructor(internal: unknown) {
 		super(internal)
 	}
 
-	/**
-	 * Setup the actions.
-	 *
-	 * @access public
-	 * @since 2.0.0
-	 */
-	updateActions() {
-		// this.setActionDefinitions(this.getActionDefinitions())
-		UpdateActions(this)
+	async init(initialConfig: DLiveModuleConfig): Promise<void> {
+		this.config = initialConfig
+		await this.configUpdated(this.config || {})
 	}
 
-	setRouting(ch, selArray, isMute) {
-		let routingCmds = []
-		let start = isMute ? this.dcaCount : 0
-		let qty = isMute ? 8 : this.dcaCount
-		let chOfs = 0
-		for (let i = start; i < start + qty; i++) {
-			let grpCode = i + (selArray.includes(`${i - start}`) ? 0x40 : 0)
-			routingCmds.push(Buffer.from([0xb0, 0x63, ch + chOfs, 0xb0, 0x62, 0x40, 0xb0, 0x06, grpCode]))
+	async destroy(): Promise<void> {
+		if (this.tcpSocket !== undefined) {
+			this.tcpSocket.destroy()
 		}
 
-		return routingCmds
+		if (this.midiSocket !== undefined) {
+			this.midiSocket.destroy()
+		}
+
+		this.log('debug', `destroyed ${this.id}`)
 	}
 
-	/**
-	 * Executes the provided action.
-	 *
-	 * @param {string} actionId - the action ID to be executed
-	 * @param {Object} options - the action options
-	 * @access public
-	 * @since 2.0.0
-	 */
+	async configUpdated(config: DLiveModuleConfig): Promise<void> {
+		this.config = config || {
+			host: '192.168.1.70',
+			midiChannel: 0,
+			midiPort: 51328,
+			tcpPort: 51321,
+		}
+
+		// Ensure port defaults are set even if config exists
+		if (!this.config.midiPort) this.config.midiPort = 51328
+		if (!this.config.tcpPort) this.config.tcpPort = 51321
+		if (this.config.midiChannel === undefined) this.config.midiChannel = 0
+
+		this.updateActions()
+		this.init_tcp()
+	}
+
+	updateActions(): void {
+		_UpdateActions(this)
+	}
+
+	sendMidiToDlive(midiMessage: number[]): void {
+		if (!this.midiSocket) {
+			this.log('error', 'no midi socket')
+			return
+		}
+		console.log('sending midi: ', midiMessage)
+		this.midiSocket.send(Buffer.from(midiMessage)).catch((e) => {
+			this.log('error', `MIDI send error: ${e.midiMessage}`)
+		})
+	}
+
+	sendCommand({ command, params }: DLiveCommand): void {
+		console.log('sendCommand: ', command, params)
+		if (!this.midiSocket) {
+			this.log('error', 'no midi socket')
+			return
+		}
+
+		switch (command) {
+			case 'mute_on': {
+				const { channelNo, channelType } = params
+				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
+				this.sendMidiToDlive([
+					0x90 + midiChannelOffset,
+					channelNo + midiNoteOffset,
+					0x7f,
+					channelNo + midiNoteOffset,
+					0,
+				])
+				break
+			}
+
+			case 'mute_off': {
+				const { channelNo, channelType } = params
+				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
+				this.sendMidiToDlive([
+					0x90 + midiChannelOffset,
+					channelNo + midiNoteOffset,
+					0x3f,
+					channelNo + midiNoteOffset,
+					0,
+				])
+				break
+			}
+
+			case 'fader_level': {
+				const { channelNo, channelType, level } = params
+				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
+				this.sendMidiToDlive([0xb0 + midiChannelOffset, 0x63, channelNo + midiNoteOffset, 0x62, 0x17, 0x06, level])
+				break
+			}
+
+			case 'set_socket_preamp_48v': {
+				const { socketNo, shouldEnable } = params
+				this.sendMidiToDlive([...SYSEX_HEADER, 0, 0, 0x0c, socketNo, shouldEnable ? 0x7f : 0, 0xf7])
+				break
+			}
+
+			case 'channel_assignment_to_main_mix_on': {
+				const { channelNo, channelType } = params
+				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
+				this.sendMidiToDlive([0xb0 + midiChannelOffset, 0x63, channelNo + midiNoteOffset, 0x62, 0x18, 0x06, 0x7f])
+				break
+			}
+
+			case 'channel_assignment_to_main_mix_off': {
+				const { channelNo, channelType } = params
+				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
+				this.sendMidiToDlive([0xb0 + midiChannelOffset, 0x63, channelNo + midiNoteOffset, 0x62, 0x18, 0x06, 0x3f])
+				break
+			}
+			case 'aux_fx_matrix_send_level': {
+				const { channelNo, channelType, destinationChannelNo, destinationChannelType, level } = params
+				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
+				const { midiChannelOffset: destinationMidiChannelOffset, midiNoteOffset: destinationMidiNoteOffset } =
+					getMidiOffsetsForChannelType(destinationChannelType)
+
+				console.log(params)
+				this.sendMidiToDlive([
+					...SYSEX_HEADER,
+					0 + midiChannelOffset,
+					0xd,
+					channelNo + midiNoteOffset,
+					destinationMidiChannelOffset,
+					destinationChannelNo + destinationMidiNoteOffset,
+					level,
+					0xf7,
+				])
+				break
+			}
+			// case 'input_to_group_aux_on':
+			// case 'dca_assignment_on':
+			// case 'dca_assignment_off':
+			// case 'mute_group_assignment_on':
+			// case 'mute_group_assignment_off':
+			// case 'set_socket_preamp_gain':
+			// case 'set_socket_preamp_pad':
+			case 'set_channel_name': {
+				const { channelNo, channelType, name } = params
+				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
+				this.sendMidiToDlive([
+					...SYSEX_HEADER,
+					0 + midiChannelOffset,
+					0x03,
+					channelNo + midiNoteOffset,
+					...stringToSysExBytes(name),
+					0xf7,
+				])
+				break
+			}
+			case 'set_channel_colour':
+			case 'scene_recall':
+			case 'cue_list_recall':
+			case 'go_next_previous':
+			case 'parametric_eq':
+			case 'hpf_frequency':
+			case 'hpf_on_off':
+			case 'ufx_global_key':
+			case 'ufx_global_scale':
+			case 'ufx_parameter':
+				break
+		}
+	}
+
 	sendAction(actionId, options) {
-		let opt = options
-		let channel = parseInt(opt.inputChannel)
+		console.log({ actionId, options })
+		const opt = options
+		const channel = parseInt(opt.inputChannel)
 		let chOfs = 0
-		let strip = parseInt(opt.strip)
+		const strip = parseInt(opt.strip)
 		let cmd = { port: this.config.midiPort, buffers: [] }
 
 		switch (
@@ -135,17 +267,18 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				break
 
 			case 'dca_assign':
-				cmd.buffers = this.setRouting(channel, opt.dcaGroup, false)
+				cmd.buffers = getRoutingCmds(channel, opt.dcaGroup, false)
 				break
 
 			case 'mute_assign':
-				cmd.buffers = this.setRouting(channel, opt.muteGroup, true)
+				cmd.buffers = getRoutingCmds(channel, opt.muteGroup, true)
 				break
 
-			case 'scene_recall':
-				let sceneNumber = parseInt(opt.sceneNumber)
+			case 'scene_recall': {
+				const sceneNumber = parseInt(opt.sceneNumber)
 				cmd.buffers = [Buffer.from([0xb0, 0, (sceneNumber >> 7) & 0x0f, 0xc0, sceneNumber & 0x7f])]
 				break
+			}
 
 			case 'scene_next':
 				cmd.buffers = [Buffer.from([0xb0, 0x77, 0x7f])] // Control Change for Scene Next
@@ -164,13 +297,14 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				cmd.buffers = [Buffer.from([0xb0, 0x63, strip, 0xb0, 0x62, 0x01, 0xb0, 0x06, opt.enable ? 0x7f : 0x00])]
 				break
 
-			case 'preamp_gain':
+			case 'preamp_gain': {
 				// Pitchbend message for preamp gain (14-bit value)
-				let gainValue = parseInt(opt.gain)
-				let lsb = gainValue & 0x7f
-				let msb = (gainValue >> 7) & 0x7f
+				const gainValue = parseInt(opt.gain)
+				const lsb = gainValue & 0x7f
+				const msb = (gainValue >> 7) & 0x7f
 				cmd.buffers = [Buffer.from([0xe0, lsb, msb])]
 				break
+			}
 
 			case 'preamp_pad':
 				cmd.buffers = [Buffer.from([0xf0, 0, 0, 0x1a, 0x50, 0x10, 0x01, 0, 0, 0x0d, strip, opt.pad ? 0x7f : 0, 0xf7])]
@@ -194,11 +328,11 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 			case 'send_matrix_stereo':
 			case 'send_mix':
 			case 'send_fx':
-			case 'send_ufx':
+			case 'send_ufx': {
 				// SysEx messages for send levels
-				let inputCh = parseInt(opt.inputChannel)
-				let sendCh = parseInt(opt.send)
-				let sendLevel = parseInt(opt.level)
+				const inputCh = parseInt(opt.inputChannel)
+				const sendCh = parseInt(opt.send)
+				const sendLevel = parseInt(opt.level)
 				let sendType = 0x01 // Default for aux sends
 
 				if (actionId.includes('fx') && !actionId.includes('ufx')) {
@@ -213,6 +347,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 					Buffer.from([0xf0, 0, 0, 0x1a, 0x50, 0x10, 0x01, 0, 0, sendType, inputCh, sendCh, sendLevel, 0xf7]),
 				]
 				break
+			}
 
 			case 'ufx_global_key':
 				// Control Change message for UFX Global Key (BN, 0C, Key)
@@ -224,19 +359,20 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				cmd.buffers = [Buffer.from([0xb0 + (this.config.midiChannel || 0), 0x0d, parseInt(opt.scale)])]
 				break
 
-			case 'ufx_unit_parameter':
+			case 'ufx_unit_parameter': {
 				// Control Change message for UFX Unit Parameter (BM, nn, vv)
-				let midiCh = parseInt(opt.midiChannel) - 1 // Convert to 0-based
+				const midiCh = parseInt(opt.midiChannel) - 1 // Convert to 0-based
 				cmd.buffers = [Buffer.from([0xb0 + midiCh, parseInt(opt.controlNumber), parseInt(opt.value)])]
 				break
+			}
 
-			case 'ufx_unit_key':
+			case 'ufx_unit_key': {
 				// Control Change message for UFX Unit Key Parameter with CC value scaling
-				let keyMidiCh = parseInt(opt.midiChannel) - 1 // Convert to 0-based
-				let controlNum = parseInt(opt.controlNumber)
+				const keyMidiCh = parseInt(opt.midiChannel) - 1 // Convert to 0-based
+				const controlNum = parseInt(opt.controlNumber)
 
 				// Map key to CC value range (refer to protocol table)
-				let keyMapping = {
+				const keyMapping = {
 					C: 5, // Mid-range value for C (0-10 range)
 					'C#': 16, // Mid-range value for C# (11-21 range)
 					D: 26, // Mid-range value for D (22-31 range)
@@ -251,25 +387,27 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 					B: 122, // Mid-range value for B (117-127 range)
 				}
 
-				let keyValue = keyMapping[opt.key] || 5
+				const keyValue = keyMapping[opt.key] || 5
 				cmd.buffers = [Buffer.from([0xb0 + keyMidiCh, controlNum, keyValue])]
 				break
+			}
 
-			case 'ufx_unit_scale':
+			case 'ufx_unit_scale': {
 				// Control Change message for UFX Unit Scale Parameter with CC value scaling
-				let scaleMidiCh = parseInt(opt.midiChannel) - 1 // Convert to 0-based
-				let scaleControlNum = parseInt(opt.controlNumber)
+				const scaleMidiCh = parseInt(opt.midiChannel) - 1 // Convert to 0-based
+				const scaleControlNum = parseInt(opt.controlNumber)
 
 				// Map scale to CC value range (refer to protocol table)
-				let scaleMapping = {
+				const scaleMapping = {
 					Major: 21, // Mid-range value for Major (0-42 range)
 					Minor: 63, // Mid-range value for Minor (43-84 range)
 					Chromatic: 106, // Mid-range value for Chromatic (85-127 range)
 				}
 
-				let scaleValue = scaleMapping[opt.scale] || 21
+				const scaleValue = scaleMapping[opt.scale] || 21
 				cmd.buffers = [Buffer.from([0xb0 + scaleMidiCh, scaleControlNum, scaleValue])]
 				break
+			}
 
 			case 'talkback_on':
 				cmd = {
@@ -290,12 +428,10 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 			if (actionId.slice(0, 4) == 'mute') {
 				cmd.buffers = [Buffer.from([0x90 + chOfs, strip, opt.mute ? 0x7f : 0x3f, 0x90 + chOfs, strip, 0])]
 			} else {
-				let faderLevel = parseInt(opt.level)
+				const faderLevel = parseInt(opt.level)
 				cmd.buffers = [Buffer.from([0xb0 + chOfs, 0x63, strip, 0x62, 0x17, 0x06, faderLevel])]
 			}
 		}
-
-		// console.log(cmd);
 
 		for (let i = 0; i < cmd.buffers.length; i++) {
 			if (cmd.port === this.config.midiPort && this.midiSocket !== undefined) {
@@ -318,14 +454,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 		}
 	}
 
-	/**
-	 * Creates the configuration fields for web config.
-	 *
-	 * @returns {Array} the config fields
-	 * @access public
-	 * @since 2.0.0
-	 */
-	getConfigFields() {
+	getConfigFields(): SomeCompanionConfigField[] {
 		return [
 			{
 				type: 'static-text',
@@ -372,44 +501,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 		]
 	}
 
-	/**
-	 * Clean up the instance before it is destroyed.
-	 *
-	 * @access public
-	 * @since 2.0.0
-	 */
-	async destroy() {
-		if (this.tcpSocket !== undefined) {
-			this.tcpSocket.destroy()
-		}
-
-		if (this.midiSocket !== undefined) {
-			this.midiSocket.destroy()
-		}
-
-		this.log('debug', `destroyed ${this.id}`)
-	}
-
-	/**
-	 * Main initialization function called once the module
-	 * is OK to start doing things.
-	 *
-	 * @access public
-	 * @since 1.2.0
-	 */
-	async init(initialConfig) {
-		this.config = initialConfig
-		// Initialize with current config or empty object if not set yet
-		await this.configUpdated(this.config || {})
-	}
-
-	/**
-	 * INTERNAL: use setup data to initalize the tcp socket object.
-	 *
-	 * @access protected
-	 * @since 2.0.0
-	 */
-	init_tcp() {
+	init_tcp(): void {
 		if (this.tcpSocket !== undefined) {
 			this.tcpSocket.destroy()
 			delete this.tcpSocket
@@ -450,32 +542,19 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 			})
 		}
 	}
+}
 
-	/**
-	 * Process an updated configuration array.
-	 *
-	 * @param {Object} config - the new configuration
-	 * @access public
-	 * @since 2.0.0
-	 */
-	async configUpdated(config) {
-		// Provide default config if none exists
-		this.config = config || {
-			host: '192.168.1.70',
-			model: 'dLive',
-			midiPort: 51328,
-			tcpPort: 51321,
-			midiChannel: 0,
-		}
-
-		// Ensure port defaults are set even if config exists
-		if (!this.config.midiPort) this.config.midiPort = 51328
-		if (!this.config.tcpPort) this.config.tcpPort = 51321
-		if (this.config.midiChannel === undefined) this.config.midiChannel = 0
-
-		this.updateActions()
-		this.init_tcp()
+const getRoutingCmds = (ch: number, selArray: string, isMute: boolean): Buffer[] => {
+	const routingCmds: Buffer[] = []
+	const start = isMute ? DCA_COUNT : 0
+	const qty = isMute ? 8 : DCA_COUNT
+	const chOfs = 0
+	for (let i = start; i < start + qty; i++) {
+		const grpCode = i + (selArray.includes(`${i - start}`) ? 0x40 : 0)
+		routingCmds.push(Buffer.from([0xb0, 0x63, ch + chOfs, 0xb0, 0x62, 0x40, 0xb0, 0x06, grpCode]))
 	}
+
+	return routingCmds
 }
 
 runEntrypoint(ModuleInstance, upgradeScripts)
