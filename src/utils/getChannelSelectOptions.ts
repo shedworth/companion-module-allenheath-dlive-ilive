@@ -27,15 +27,19 @@ const prependPrefix = (text: string, prefix?: string) => pipe(compact, join('_')
 
 interface GetChannelSelectOptionsArgs {
 	exclude?: ChannelType[]
+	include?: ChannelType[]
 	prefix?: string
 }
 
 export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): SomeCompanionActionInputField[] => {
 	const exclude = args?.exclude ?? []
+	const include = args?.include ?? CHANNEL_TYPE_CHOICES.map((c) => c.id)
 	const prefix = args?.prefix
 
 	const channelTypeLabel = prefix ? join(' ', [capitalize(prefix), 'Channel Type']) : 'Channel Type'
-	const filteredChannelTypeChoices = CHANNEL_TYPE_CHOICES.filter((c) => !includes(c.id, exclude))
+	const filteredChannelTypeChoices = CHANNEL_TYPE_CHOICES.filter(
+		(c) => includes(c.id, include) && !includes(c.id, exclude),
+	)
 
 	return [
 		{

@@ -48,6 +48,12 @@ type MidiChannelNumber = number
 type MidiControlNumber = number
 type MidiValue = number
 
+type DLiveModuleConfig = {
+	host: string
+	midiChannel: number
+	midiPort: number
+}
+
 type DLiveMuteOnCommand = {
 	command: 'mute_on'
 	params: {
@@ -106,10 +112,9 @@ type DLiveAuxFxMatrixSendLevelCommand = {
 type DLiveInputToGroupAuxOnCommand = {
 	command: 'input_to_group_aux_on'
 	params: {
-		sourceChannelType: Extract<ChannelType, 'input'>
-		sourceChannelNo: ChannelNumber
-		sendChannelType: Extract<ChannelType, 'mono_aux' | 'stereo_aux' | 'mono_group' | 'stereo_group'>
-		sendChannelNo: ChannelNumber
+		channelNo: ChannelNumber
+		destinationChannelType: Extract<ChannelType, 'mono_group' | 'stereo_group' | 'mono_aux' | 'stereo_aux'>
+		destinationChannelNo: ChannelNumber
 	}
 }
 
@@ -152,6 +157,7 @@ type DLiveMuteGroupAssignmentOffCommand = {
 type DLiveSetSocketPreampGainCommand = {
 	command: 'set_socket_preamp_gain'
 	params: {
+		socketType: SocketType
 		socketNo: SocketNumber
 		gain: number
 	}
@@ -160,6 +166,7 @@ type DLiveSetSocketPreampGainCommand = {
 type DLiveSetSocketPreampPadCommand = {
 	command: 'set_socket_preamp_pad'
 	params: {
+		socketType: SocketType
 		socketNo: SocketNumber
 		shouldEnable: boolean
 	}
@@ -168,6 +175,7 @@ type DLiveSetSocketPreampPadCommand = {
 type DLiveSetSocketPreamp48VCommand = {
 	command: 'set_socket_preamp_48v'
 	params: {
+		socketType: SocketType
 		socketNo: SocketNumber
 		shouldEnable: boolean
 	}
@@ -187,7 +195,7 @@ type DLiveSetChannelColourCommand = {
 	params: {
 		channelType: ChannelType
 		channelNo: ChannelNumber
-		colour: Colour
+		colour: ChannelColour
 	}
 }
 
@@ -201,14 +209,15 @@ type DLiveSceneRecallCommand = {
 type DLiveCueListRecallCommand = {
 	command: 'cue_list_recall'
 	params: {
-		recallId: CueListRecallId
+		recallId: number
 	}
 }
 
 type DLiveGoNextPreviousCommand = {
 	command: 'go_next_previous'
 	params: {
-		action: 'go' | 'next' | 'previous'
+		controlNumber: number
+		controlValue: number
 	}
 }
 
@@ -217,49 +226,49 @@ type DLiveParametricEQCommand = {
 	params: {
 		channelType: ChannelType
 		channelNo: ChannelNumber
-		bandNo: 0 | 1 | 2 | 3
-		parameter: 'type' | 'frequency' | 'width' | 'gain'
-		value: number
+		bandNo: number
+		type: EqType
+		frequency: number
+		width: number
+		gain: number
 	}
 }
 
 type DLiveHPFFrequencyCommand = {
 	command: 'hpf_frequency'
 	params: {
-		channelType: ChannelType
 		channelNo: ChannelNumber
 		frequency: number
 	}
 }
 
 type DLiveSetHPFOnOffCommand = {
-	command: 'hpf_on_off'
+	command: 'set_hpf_on_off'
 	params: {
-		channelType: ChannelType
 		channelNo: ChannelNumber
 		shouldEnable: boolean
 	}
 }
 
 type DLiveSetUFXGlobalKeyCommand = {
-	command: 'ufx_global_key'
+	command: 'set_ufx_global_key'
 	params: {
-		key: UFXKey
+		key: number
 	}
 }
 
 type DLiveSetUFXGlobalScaleCommand = {
-	command: 'ufx_global_scale'
+	command: 'set_ufx_global_scale'
 	params: {
-		scale: UFXScale
+		scale: number
 	}
 }
 
 type DLiveSetUFXParameterCommand = {
-	command: 'ufx_parameter'
+	command: 'set_ufx_unit_parameter'
 	params: {
-		midiChannel: MidiChannelNumber
-		controlNumber: MidiControlNumber
-		value: MidiValue
+		midiChannel: number
+		controlNumber: number
+		value: number
 	}
 }

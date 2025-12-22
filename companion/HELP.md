@@ -9,13 +9,11 @@ This module provides comprehensive control for Allen & Heath dLive digital mixin
 ## Connection Setup
 
 1. **IP Address**: Enter the IP address of your dLive Surface or MixRack
-2. **Network Ports**:
-   - **MIDI Port**: Configurable (default: 51328) - Used for basic mixer commands
-   - **TCP Port**: Configurable (default: 51321) - Used for dLive advanced features only
+2. **MIDI Port**: Configurable (default: 51328) - Used for basic mixer commands
 3. **MIDI Channel Configuration**:
    - **MIDI Channel for dLive System (N)**: Base MIDI channel for system control (default: 0)
    - **Note**: dLive uses 5 consecutive MIDI channels (N through N+4) for different control types
-4. **Port Configuration**: Both MIDI and TCP ports can be customized in the module configuration
+4. **Port Configuration**: MIDI port can be customized in the module configuration
 
 ## Available Actions
 

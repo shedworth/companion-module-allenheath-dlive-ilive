@@ -1,5 +1,6 @@
 import { DropdownChoice } from '@companion-module/base'
 import { times } from 'lodash/fp'
+import { midiValueToEqFrequency, midiValueToHpfFrequency } from './utils/midiValueConverters.js'
 
 export const CHANNEL_TYPES = [
 	'input',
@@ -21,6 +22,18 @@ export const CHANNEL_TYPES = [
 
 export type ChannelType = (typeof CHANNEL_TYPES)[number]
 
+export const SOCKET_TYPES = ['mixrack_sockets_1_64', 'mixrack_dx_1_2', 'mixrack_dx_3_4'] as const
+
+export type SocketType = (typeof SOCKET_TYPES)[number]
+
+export const CHANNEL_COLOURS = ['off', 'red', 'green', 'yellow', 'blue', 'purple', 'light_blue', 'white'] as const
+
+export type ChannelColour = (typeof CHANNEL_COLOURS)[number]
+
+export const EQ_TYPES = ['bell', 'lf_shelf', 'hf_shelf', 'low_pass', 'high_pass'] as const
+
+declare type EqType = (typeof EQ_TYPES)[number]
+
 export const INPUT_CHANNEL_COUNT = 128
 export const MONO_GROUP_COUNT = 62
 export const STEREO_GROUP_COUNT = 31
@@ -39,10 +52,28 @@ export const DCA_COUNT = 24
 export const MUTE_GROUP_COUNT = 8
 
 export const SCENE_COUNT = 500
+export const CUE_LIST_COUNT = 1999
+export const SCENES_PER_BANK = 128
+export const CUE_LISTS_PER_BANK = 128
 
 export const FADER_STEP_COUNT = 128
 export const GAIN_STEP_COUNT = 128
+
 export const SOCKET_PREAMP_COUNT = 128
+export const MIXRACK_SOCKET_COUNT = 64
+export const MIXRACK_DX_SOCKET_COUNT = 32
+
+export const PREAMP_MINIMUM_GAIN = 5
+export const PREAMP_MAXIMUM_GAIN = 60
+
+export const EQ_MINIMUM_FREQUENCY = 20
+export const EQ_MAXIMUM_FREQUENCY = 20000
+export const EQ_MINIMUM_WIDTH = 0.1
+export const EQ_MAXIMUM_WIDTH = 1.5
+export const EQ_MINIMUM_GAIN = -15
+export const EQ_MAXIMUM_GAIN = 15
+export const HPF_MINIMUM_FREQUENCY = 20
+export const HPF_MAXIMUM_FREQUENCY = 2000
 
 export const CHANNEL_MIDI_CHANNEL_OFFSETS: Record<ChannelType, number> = {
 	input: 0,
@@ -80,6 +111,12 @@ export const CHANNEL_MIDI_NOTE_OFFSETS: Record<ChannelType, number> = {
 	stereo_ufx_return: 0x5e,
 }
 
+export const SOCKET_MIDI_NOTE_OFFSETS: Record<SocketType, number> = {
+	mixrack_sockets_1_64: 0,
+	mixrack_dx_1_2: 0x40,
+	mixrack_dx_3_4: 0x60,
+}
+
 export const SYSEX_HEADER = [0xf0, 0, 0, 0x1a, 0x50, 0x10, 0x01, 0x00]
 
 export const CHANNEL_TYPE_CHOICES: { label: string; id: ChannelType }[] = [
@@ -100,35 +137,66 @@ export const CHANNEL_TYPE_CHOICES: { label: string; id: ChannelType }[] = [
 	{ label: 'Stereo UFX Return', id: 'stereo_ufx_return' },
 ]
 
-export const INPUT_CHANNEL_CHOICES: DropdownChoice[] = times((id: number) => ({ label: `CH ${id + 1}`, id }))(
-	INPUT_CHANNEL_COUNT,
-)
+export const SOCKET_TYPE_CHOICES: { label: string; id: SocketType }[] = [
+	{ label: 'MixRack Sockets 1-64', id: 'mixrack_sockets_1_64' },
+	{ label: 'MixRack DX 1/2', id: 'mixrack_dx_1_2' },
+	{ label: 'MixRack DX 3/4', id: 'mixrack_dx_3_4' },
+]
 
-export const SCENE_CHOICES: DropdownChoice[] = times((id: number) => ({ label: `SCENE ${id + 1}`, id }))(SCENE_COUNT)
+export const CHANNEL_COLOUR_CHOICES: { label: string; id: number }[] = [
+	{ label: 'Off', id: 0 },
+	{ label: 'Red', id: 1 },
+	{ label: 'Green', id: 2 },
+	{ label: 'Yellow', id: 3 },
+	{ label: 'Blue', id: 4 },
+	{ label: 'Purple', id: 5 },
+	{ label: 'Light Blue', id: 6 },
+	{ label: 'White', id: 7 },
+]
 
-export const DCA_CHOICES: DropdownChoice[] = times((id: number) => ({ label: `DCA ${id + 1}`, id }))(DCA_COUNT)
+export const EQ_TYPE_CHOICES: { label: string; id: EqType }[] = [
+	{ label: 'Bell', id: 'bell' },
+	{ label: 'Low Shelf', id: 'lf_shelf' },
+	{ label: 'High Shelf', id: 'hf_shelf' },
+	{ label: 'Low Pass', id: 'low_pass' },
+	{ label: 'High Pass', id: 'high_pass' },
+]
 
-export const MUTE_GROUP_CHOICES: DropdownChoice[] = times((id: number) => ({ label: `MUTE ${id + 1}`, id }))(
-	MUTE_GROUP_COUNT,
-)
+export const EQ_FREQUENCY_CHOICES: { label: string; id: number }[] = times((n) => {
+	const frequency = midiValueToEqFrequency(n)
+	const label = frequency < 1000 ? `${frequency} Hz` : `${(frequency / 1000).toFixed(2)} kHz`
+	return { label, id: n }
+})(128)
 
-export const FADER_LEVEL_CHOICES: DropdownChoice[] = times((id: number) => {
-	const dbVal = ((id - 107) / 2).toFixed(1)
-	// @ts-expect-error TODO - investigate later
-	const dbStr = id == 0 ? '-INF' : dbVal == 0 ? dbVal : dbVal > 0 ? `+${dbVal}` : `-${dbVal}`
-	return { label: `${dbStr} dB`, id }
+export const HPF_FREQUENCY_CHOICES: { label: string; id: number }[] = times((n) => {
+	const frequency = midiValueToHpfFrequency(n)
+	const label = frequency < 1000 ? `${frequency} Hz` : `${(frequency / 1000).toFixed(2)} kHz`
+	return { label, id: n }
+})(128)
+
+type EqMidiParameters = {
+	frequency: number
+	width: number
+	gain: number
+	type: number
+}
+
+export const EQ_PARAMETER_MIDI_VALUES_FOR_BANDS: Record<number, EqMidiParameters> = {
+	0: { type: 0x1a, frequency: 0x1b, width: 0x1c, gain: 0x1d },
+	1: { type: 0x1e, frequency: 0x1f, width: 0x20, gain: 0x21 },
+	2: { type: 0x22, frequency: 0x23, width: 0x24, gain: 0x25 },
+	3: { type: 0x26, frequency: 0x27, width: 0x28, gain: 0x29 },
+}
+
+export const FADER_LEVEL_CHOICES: DropdownChoice[] = times((index: number) => {
+	const id = FADER_STEP_COUNT - 1 - index
+	const dbLevel = ((id - 107) / 2).toFixed(1)
+	const levelString = id == 0 ? '-INF' : dbLevel
+	return { label: `${levelString} dB`, id }
 })(FADER_STEP_COUNT)
 
-// Preamp Gain Control
-export const GAIN_CHOICES: DropdownChoice[] = times((id: number) => {
-	const gainVal = ((id * 60) / 127 - 10).toFixed(1) // -10dB to +50dB range
-	// @ts-expect-error TODO - investigate later
-	const gainStr = gainVal == 0 ? '0' : gainVal > 0 ? `+${gainVal}` : gainVal
-	return { label: `${gainStr} dB`, id }
-})(GAIN_STEP_COUNT)
-
 // High Pass Filter Control
-export const HPF_CHOICES = [
+export const HPF_CHOICES: DropdownChoice[] = [
 	{ label: 'Off', id: 0 },
 	{ label: '20 Hz', id: 1 },
 	{ label: '25 Hz', id: 2 },
@@ -147,7 +215,7 @@ export const HPF_CHOICES = [
 ]
 
 // UFX Global Key Control
-export const UFX_KEY_CHOICES = [
+export const UFX_KEY_CHOICES: DropdownChoice[] = [
 	{ label: 'C', id: 0x00 },
 	{ label: 'C#', id: 0x01 },
 	{ label: 'D', id: 0x02 },
@@ -163,7 +231,7 @@ export const UFX_KEY_CHOICES = [
 ]
 
 // UFX Global Scale Control
-export const UFX_SCALE_CHOICES = [
+export const UFX_SCALE_CHOICES: DropdownChoice[] = [
 	{ label: 'Major', id: 0x00 },
 	{ label: 'Minor', id: 0x01 },
 ]
