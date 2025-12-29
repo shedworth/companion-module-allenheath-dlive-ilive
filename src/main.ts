@@ -28,8 +28,12 @@ import {
 import { parseDliveModuleConfig } from './validators.js'
 
 export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
-	config!: DLiveModuleConfig
+	config?: DLiveModuleConfig
 	midiSocket?: TCPHelper
+
+	get baseMidiChannel(): number {
+		return this.config?.midiChannel ?? 0
+	}
 
 	constructor(internal: unknown) {
 		super(internal)
@@ -39,8 +43,11 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 	// Called when Companion loads module
 	async init(initialConfig: Record<string, unknown>): Promise<void> {
 		this.log('info', `Initialising module from config: ${JSON.stringify(initialConfig)}`)
-
-		this.config = parseDliveModuleConfig(initialConfig)
+		try {
+			this.config = parseDliveModuleConfig(initialConfig)
+		} catch (error) {
+			this.log('error', `Unable to parse config object during init method: ${JSON.stringify(error)}`)
+		}
 		UpdateActions(this)
 		this.initialiseMidi()
 	}
@@ -48,8 +55,11 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 	// Called when Companion config is updated
 	async configUpdated(updatedConfig: Record<string, unknown>): Promise<void> {
 		this.log('info', `Updating module from config: ${JSON.stringify(updatedConfig)}`)
-
-		this.config = parseDliveModuleConfig(updatedConfig)
+		try {
+			this.config = parseDliveModuleConfig(updatedConfig)
+		} catch (error) {
+			this.log('error', `Unable to parse config object during configUpdated method: ${JSON.stringify(error)}`)
+		}
 		this.initialiseMidi()
 	}
 
@@ -62,6 +72,10 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 
 	/** Custom methods **/
 	initialiseMidi(): void {
+		if (!this.config) {
+			this.log('error', 'Unable to initialise MIDI, as no config object exists')
+			return
+		}
 		this.destroyMidiSocket()
 
 		const { host, midiPort } = this.config
@@ -83,9 +97,11 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 			return
 		}
 		this.log('debug', `Sending MIDI: ${midiMessage}`)
-		this.midiSocket.send(Buffer.from(midiMessage)).catch((error) => {
-			this.log('error', `MIDI send error: ${error.midiMessage}`)
-		})
+		try {
+			void this.midiSocket.send(Buffer.from(midiMessage))
+		} catch (error) {
+			this.log('error', `Error sending MIDI: ${JSON.stringify(error)}`)
+		}
 	}
 
 	destroyMidiSocket(): void {
@@ -99,7 +115,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { channelNo, channelType } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
 				this.sendMidiToDlive([
-					0x90 + midiChannelOffset,
+					0x90 + this.baseMidiChannel + midiChannelOffset,
 					channelNo + midiNoteOffset,
 					0x7f,
 					channelNo + midiNoteOffset,
@@ -112,7 +128,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { channelNo, channelType } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
 				this.sendMidiToDlive([
-					0x90 + midiChannelOffset,
+					0x90 + this.baseMidiChannel + midiChannelOffset,
 					channelNo + midiNoteOffset,
 					0x3f,
 					channelNo + midiNoteOffset,
@@ -124,21 +140,45 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 			case 'fader_level': {
 				const { channelNo, channelType, level } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
-				this.sendMidiToDlive([0xb0 + midiChannelOffset, 0x63, channelNo + midiNoteOffset, 0x62, 0x17, 0x06, level])
+				this.sendMidiToDlive([
+					0xb0 + this.baseMidiChannel + midiChannelOffset,
+					0x63,
+					channelNo + midiNoteOffset,
+					0x62,
+					0x17,
+					0x06,
+					level,
+				])
 				break
 			}
 
 			case 'channel_assignment_to_main_mix_on': {
 				const { channelNo, channelType } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
-				this.sendMidiToDlive([0xb0 + midiChannelOffset, 0x63, channelNo + midiNoteOffset, 0x62, 0x18, 0x06, 0x7f])
+				this.sendMidiToDlive([
+					0xb0 + this.baseMidiChannel + midiChannelOffset,
+					0x63,
+					channelNo + midiNoteOffset,
+					0x62,
+					0x18,
+					0x06,
+					0x7f,
+				])
 				break
 			}
 
 			case 'channel_assignment_to_main_mix_off': {
 				const { channelNo, channelType } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
-				this.sendMidiToDlive([0xb0 + midiChannelOffset, 0x63, channelNo + midiNoteOffset, 0x62, 0x18, 0x06, 0x3f])
+				this.sendMidiToDlive([
+					0xb0 + this.baseMidiChannel + midiChannelOffset,
+					0x63,
+					channelNo + midiNoteOffset,
+					0x62,
+					0x18,
+					0x06,
+					0x3f,
+				])
 				break
 			}
 
@@ -149,7 +189,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 					getMidiOffsetsForChannelType(destinationChannelType)
 				this.sendMidiToDlive([
 					...SYSEX_HEADER,
-					0 + midiChannelOffset,
+					0 + this.baseMidiChannel + midiChannelOffset,
 					0xd,
 					channelNo + midiNoteOffset,
 					destinationMidiChannelOffset,
@@ -167,7 +207,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 					getMidiOffsetsForChannelType(destinationChannelType)
 				this.sendMidiToDlive([
 					...SYSEX_HEADER,
-					0 + midiChannelOffset,
+					0 + this.baseMidiChannel + midiChannelOffset,
 					0xe,
 					channelNo + midiNoteOffset,
 					destinationMidiChannelOffset,
@@ -182,7 +222,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { channelNo, channelType, dcaNo } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
 				this.sendMidiToDlive([
-					0xb0 + midiChannelOffset,
+					0xb0 + this.baseMidiChannel + midiChannelOffset,
 					0x63,
 					channelNo + midiNoteOffset,
 					0x62,
@@ -196,7 +236,15 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 			case 'dca_assignment_off': {
 				const { channelNo, channelType, dcaNo } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
-				this.sendMidiToDlive([0xb0 + midiChannelOffset, 0x63, channelNo + midiNoteOffset, 0x62, 0x40, 0x06, dcaNo])
+				this.sendMidiToDlive([
+					0xb0 + this.baseMidiChannel + midiChannelOffset,
+					0x63,
+					channelNo + midiNoteOffset,
+					0x62,
+					0x40,
+					0x06,
+					dcaNo,
+				])
 				break
 			}
 
@@ -204,7 +252,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { channelNo, channelType, muteGroupNo } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
 				this.sendMidiToDlive([
-					0xb0 + midiChannelOffset,
+					0xb0 + this.baseMidiChannel + midiChannelOffset,
 					0x63,
 					channelNo + midiNoteOffset,
 					0x62,
@@ -219,7 +267,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { channelNo, channelType, muteGroupNo } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
 				this.sendMidiToDlive([
-					0xb0 + midiChannelOffset,
+					0xb0 + this.baseMidiChannel + midiChannelOffset,
 					0x63,
 					channelNo + midiNoteOffset,
 					0x62,
@@ -234,7 +282,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { socketNo, socketType, gain } = params
 				const midiNoteOffset = SOCKET_MIDI_NOTE_OFFSETS[socketType as SocketType]
 				const gainMidiValue = convertPreampGainToMidiValue(gain)
-				this.sendMidiToDlive([0xe0, socketNo + midiNoteOffset, gainMidiValue])
+				this.sendMidiToDlive([0xe0 + this.baseMidiChannel, socketNo + midiNoteOffset, gainMidiValue])
 				break
 			}
 
@@ -242,7 +290,14 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				// not tested
 				const { socketNo, socketType, shouldEnable } = params
 				const midiNoteOffset = SOCKET_MIDI_NOTE_OFFSETS[socketType as SocketType]
-				this.sendMidiToDlive([...SYSEX_HEADER, 0, 0x9, socketNo + midiNoteOffset, shouldEnable ? 0x40 : 0x0, 0xf7])
+				this.sendMidiToDlive([
+					...SYSEX_HEADER,
+					0 + this.baseMidiChannel,
+					0x9,
+					socketNo + midiNoteOffset,
+					shouldEnable ? 0x40 : 0x0,
+					0xf7,
+				])
 				break
 			}
 
@@ -250,7 +305,14 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				// not tested
 				const { socketNo, socketType, shouldEnable } = params
 				const midiNoteOffset = SOCKET_MIDI_NOTE_OFFSETS[socketType as SocketType]
-				this.sendMidiToDlive([...SYSEX_HEADER, 0, 0xc, socketNo + midiNoteOffset, shouldEnable ? 0x40 : 0x0, 0xf7])
+				this.sendMidiToDlive([
+					...SYSEX_HEADER,
+					0 + this.baseMidiChannel,
+					0xc,
+					socketNo + midiNoteOffset,
+					shouldEnable ? 0x40 : 0x0,
+					0xf7,
+				])
 				break
 			}
 
@@ -259,7 +321,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
 				this.sendMidiToDlive([
 					...SYSEX_HEADER,
-					0 + midiChannelOffset,
+					0 + this.baseMidiChannel + midiChannelOffset,
 					0x03,
 					channelNo + midiNoteOffset,
 					...stringToSysExBytes(name),
@@ -271,7 +333,14 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 			case 'set_channel_colour': {
 				const { channelNo, channelType, colour } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
-				this.sendMidiToDlive([...SYSEX_HEADER, 0 + midiChannelOffset, 0x06, channelNo + midiNoteOffset, colour, 0xf7])
+				this.sendMidiToDlive([
+					...SYSEX_HEADER,
+					0 + this.baseMidiChannel + midiChannelOffset,
+					0x06,
+					channelNo + midiNoteOffset,
+					colour,
+					0xf7,
+				])
 				break
 			}
 
@@ -280,7 +349,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { sceneNo } = params
 				const sceneBankNo = Math.floor(sceneNo / SCENES_PER_BANK)
 				const sceneNoInBank = sceneNo % SCENES_PER_BANK
-				this.sendMidiToDlive([0xb0, 0, sceneBankNo, 0xc0, sceneNoInBank])
+				this.sendMidiToDlive([0xb0 + this.baseMidiChannel, 0, sceneBankNo, 0xc0, sceneNoInBank])
 				break
 			}
 
@@ -290,14 +359,14 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { recallId } = params
 				const recallBankNo = Math.min(15, Math.floor(recallId / CUE_LISTS_PER_BANK))
 				const recallIdInBank = recallId % CUE_LISTS_PER_BANK
-				this.sendMidiToDlive([0xb0, 0, recallBankNo, 0xc0, recallIdInBank])
+				this.sendMidiToDlive([0xb0 + this.baseMidiChannel, 0, recallBankNo, 0xc0, recallIdInBank])
 				break
 			}
 
 			// not tested
 			case 'go_next_previous': {
 				const { controlNumber, controlValue } = params
-				this.sendMidiToDlive([0xb0, controlNumber, controlValue])
+				this.sendMidiToDlive([0xb0 + this.baseMidiChannel, controlNumber, controlValue])
 				break
 			}
 
@@ -313,7 +382,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 
 				const messages: number[][] = [
 					[
-						0xb0 + midiChannelOffset,
+						0xb0 + this.baseMidiChannel + midiChannelOffset,
 						0x63,
 						channelNo + midiNoteOffset,
 						0x62,
@@ -322,7 +391,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 						typeMidiValue,
 					],
 					[
-						0xb0 + midiChannelOffset,
+						0xb0 + this.baseMidiChannel + midiChannelOffset,
 						0x63,
 						channelNo + midiNoteOffset,
 						0x62,
@@ -331,7 +400,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 						frequency,
 					],
 					[
-						0xb0 + midiChannelOffset,
+						0xb0 + this.baseMidiChannel + midiChannelOffset,
 						0x63,
 						channelNo + midiNoteOffset,
 						0x62,
@@ -340,7 +409,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 						widthMidiValue,
 					],
 					[
-						0xb0 + midiChannelOffset,
+						0xb0 + this.baseMidiChannel + midiChannelOffset,
 						0x63,
 						channelNo + midiNoteOffset,
 						0x62,
@@ -358,7 +427,15 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 			case 'hpf_frequency': {
 				const { channelNo, frequency } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType('input')
-				this.sendMidiToDlive([0xb0 + midiChannelOffset, 0x63, channelNo + midiNoteOffset, 0x62, 0x30, 0x06, frequency])
+				this.sendMidiToDlive([
+					0xb0 + this.baseMidiChannel + midiChannelOffset,
+					0x63,
+					channelNo + midiNoteOffset,
+					0x62,
+					0x30,
+					0x06,
+					frequency,
+				])
 				break
 			}
 
@@ -366,7 +443,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { channelNo, shouldEnable } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType('input')
 				this.sendMidiToDlive([
-					0xb0 + midiChannelOffset,
+					0xb0 + this.baseMidiChannel + midiChannelOffset,
 					0x63,
 					channelNo + midiNoteOffset,
 					0x62,
@@ -379,19 +456,19 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 
 			case 'set_ufx_global_key': {
 				const { key } = params
-				this.sendMidiToDlive([0xb0, 0x0c, key])
+				this.sendMidiToDlive([0xb0 + this.baseMidiChannel, 0x0c, key])
 				break
 			}
 
 			case 'set_ufx_global_scale': {
 				const { scale } = params
-				this.sendMidiToDlive([0xb0, 0x0d, scale])
+				this.sendMidiToDlive([0xb0 + this.baseMidiChannel, 0x0d, scale])
 				break
 			}
 
 			case 'set_ufx_unit_parameter': {
 				const { midiChannel, controlNumber, value } = params
-				this.sendMidiToDlive([0xb0 + midiChannel, controlNumber, value])
+				this.sendMidiToDlive([0xb0 + this.baseMidiChannel + midiChannel, controlNumber, value])
 				break
 			}
 		}
@@ -425,7 +502,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 			},
 			{
 				type: 'dropdown',
-				id: 'mainMidiChannels',
+				id: 'midiChannel',
 				label: 'Main MIDI Channels',
 				width: 6,
 				default: 0,
