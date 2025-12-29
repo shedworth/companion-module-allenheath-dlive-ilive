@@ -1,7 +1,6 @@
-// Type helpers
 type SnakeToCamel<S extends string> = S extends `${infer H}_${infer T}` ? `${H}${Capitalize<SnakeToCamel<T>>}` : S
 
-type CamelizeKeys<T extends Record<string, any>> = {
+type CamelizeKeys<T extends Record<string, unknown>> = {
 	[K in keyof T as SnakeToCamel<string & K>]: T[K]
 }
 

@@ -1,38 +1,7 @@
 import { DropdownChoice } from '@companion-module/base'
 import { times } from 'lodash/fp'
+
 import { midiValueToEqFrequency, midiValueToHpfFrequency } from './utils/midiValueConverters.js'
-
-export const CHANNEL_TYPES = [
-	'input',
-	'mono_group',
-	'stereo_group',
-	'mono_aux',
-	'stereo_aux',
-	'mono_matrix',
-	'stereo_matrix',
-	'mono_fx_send',
-	'stereo_fx_send',
-	'fx_return',
-	'main',
-	'mute_group',
-	'stereo_ufx_send',
-	'stereo_ufx_return',
-	'dca',
-] as const
-
-export type ChannelType = (typeof CHANNEL_TYPES)[number]
-
-export const SOCKET_TYPES = ['mixrack_sockets_1_64', 'mixrack_dx_1_2', 'mixrack_dx_3_4'] as const
-
-export type SocketType = (typeof SOCKET_TYPES)[number]
-
-export const CHANNEL_COLOURS = ['off', 'red', 'green', 'yellow', 'blue', 'purple', 'light_blue', 'white'] as const
-
-export type ChannelColour = (typeof CHANNEL_COLOURS)[number]
-
-export const EQ_TYPES = ['bell', 'lf_shelf', 'hf_shelf', 'low_pass', 'high_pass'] as const
-
-declare type EqType = (typeof EQ_TYPES)[number]
 
 export const INPUT_CHANNEL_COUNT = 128
 export const MONO_GROUP_COUNT = 62
@@ -74,6 +43,38 @@ export const EQ_MINIMUM_GAIN = -15
 export const EQ_MAXIMUM_GAIN = 15
 export const HPF_MINIMUM_FREQUENCY = 20
 export const HPF_MAXIMUM_FREQUENCY = 2000
+
+export const CHANNEL_TYPES = [
+	'input',
+	'mono_group',
+	'stereo_group',
+	'mono_aux',
+	'stereo_aux',
+	'mono_matrix',
+	'stereo_matrix',
+	'mono_fx_send',
+	'stereo_fx_send',
+	'fx_return',
+	'main',
+	'mute_group',
+	'stereo_ufx_send',
+	'stereo_ufx_return',
+	'dca',
+] as const
+
+export type ChannelType = (typeof CHANNEL_TYPES)[number]
+
+export const SOCKET_TYPES = ['mixrack_sockets_1_to_64', 'mixrack_dx_1_to_2', 'mixrack_dx_3_to_4'] as const
+
+export type SocketType = (typeof SOCKET_TYPES)[number]
+
+export const CHANNEL_COLOURS = ['off', 'red', 'green', 'yellow', 'blue', 'purple', 'light_blue', 'white'] as const
+
+export type ChannelColour = (typeof CHANNEL_COLOURS)[number]
+
+export const EQ_TYPES = ['bell', 'lf_shelf', 'hf_shelf', 'low_pass', 'high_pass'] as const
+
+declare type EqType = (typeof EQ_TYPES)[number]
 
 /**
 | Audio Type              | MIDI Channel Offset | Note Number (CH) Range |
@@ -134,9 +135,9 @@ export const CHANNEL_MIDI_NOTE_OFFSETS: Record<ChannelType, number> = {
 }
 
 export const SOCKET_MIDI_NOTE_OFFSETS: Record<SocketType, number> = {
-	mixrack_sockets_1_64: 0,
-	mixrack_dx_1_2: 0x40,
-	mixrack_dx_3_4: 0x60,
+	mixrack_sockets_1_to_64: 0,
+	mixrack_dx_1_to_2: 0x40,
+	mixrack_dx_3_to_4: 0x60,
 }
 
 export const SYSEX_HEADER = [0xf0, 0, 0, 0x1a, 0x50, 0x10, 0x01, 0x00]
@@ -160,9 +161,9 @@ export const CHANNEL_TYPE_CHOICES: { label: string; id: ChannelType }[] = [
 ]
 
 export const SOCKET_TYPE_CHOICES: { label: string; id: SocketType }[] = [
-	{ label: 'MixRack Sockets 1-64', id: 'mixrack_sockets_1_64' },
-	{ label: 'MixRack DX 1/2', id: 'mixrack_dx_1_2' },
-	{ label: 'MixRack DX 3/4', id: 'mixrack_dx_3_4' },
+	{ label: 'MixRack Sockets 1-64', id: 'mixrack_sockets_1_to_64' },
+	{ label: 'MixRack DX 1/2', id: 'mixrack_dx_1_to_2' },
+	{ label: 'MixRack DX 3/4', id: 'mixrack_dx_3_to_4' },
 ]
 
 export const CHANNEL_COLOUR_CHOICES: { label: string; id: number }[] = [

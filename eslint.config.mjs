@@ -1,3 +1,24 @@
 import { generateEslintConfig } from '@companion-module/tools/eslint/config.mjs'
+import simpleImportSort from 'eslint-plugin-simple-import-sort'
 
-export default generateEslintConfig({ enableTypescript: true})
+const baseConfig = await generateEslintConfig({
+	enableTypescript: true,
+	ignores: ['src/**/*spec.ts', 'src/**/__tests__/*', 'src/**/__mocks__/*', 'jest.config.ts'],
+	commonRules: {
+		'no-console': 2,
+	},
+})
+
+export default [
+	...baseConfig,
+	{
+		plugins: {
+			'simple-import-sort': simpleImportSort,
+		},
+		rules: {
+			'simple-import-sort/imports': 'error',
+			'simple-import-sort/exports': 'error',
+			'@typescript-eslint/no-explicit-any': 'error',
+		},
+	},
+]

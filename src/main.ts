@@ -18,14 +18,14 @@ import {
 	SocketType,
 	SYSEX_HEADER,
 } from './constants.js'
-import { stringToSysExBytes } from './utils/stringToSysExBytes.js'
 import { getMidiOffsetsForChannelType } from './utils/getMidiOffsetsForChannelType.js'
 import {
 	convertEqGainToMidiValue,
-	convertPreampGainToMidiValue,
 	convertEqWidthToMidiValue,
+	convertPreampGainToMidiValue,
 } from './utils/midiValueConverters.js'
-import { parseDliveModuleConfig } from './validators.js'
+import { stringToSysExBytes } from './utils/stringToSysExBytes.js'
+import { parseDliveModuleConfig } from './validators/index.js'
 
 export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 	config?: DLiveModuleConfig
@@ -189,10 +189,10 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 					getMidiOffsetsForChannelType(destinationChannelType)
 				this.sendMidiToDlive([
 					...SYSEX_HEADER,
-					0 + this.baseMidiChannel + midiChannelOffset,
+					this.baseMidiChannel + midiChannelOffset,
 					0xd,
 					channelNo + midiNoteOffset,
-					destinationMidiChannelOffset,
+					this.baseMidiChannel + destinationMidiChannelOffset,
 					destinationChannelNo + destinationMidiNoteOffset,
 					level,
 					0xf7,
@@ -207,10 +207,10 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 					getMidiOffsetsForChannelType(destinationChannelType)
 				this.sendMidiToDlive([
 					...SYSEX_HEADER,
-					0 + this.baseMidiChannel + midiChannelOffset,
+					this.baseMidiChannel + midiChannelOffset,
 					0xe,
 					channelNo + midiNoteOffset,
-					destinationMidiChannelOffset,
+					this.baseMidiChannel + destinationMidiChannelOffset,
 					destinationChannelNo + destinationMidiNoteOffset,
 					0x40,
 					0xf7,
@@ -292,7 +292,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const midiNoteOffset = SOCKET_MIDI_NOTE_OFFSETS[socketType as SocketType]
 				this.sendMidiToDlive([
 					...SYSEX_HEADER,
-					0 + this.baseMidiChannel,
+					this.baseMidiChannel,
 					0x9,
 					socketNo + midiNoteOffset,
 					shouldEnable ? 0x40 : 0x0,
@@ -307,7 +307,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const midiNoteOffset = SOCKET_MIDI_NOTE_OFFSETS[socketType as SocketType]
 				this.sendMidiToDlive([
 					...SYSEX_HEADER,
-					0 + this.baseMidiChannel,
+					this.baseMidiChannel,
 					0xc,
 					socketNo + midiNoteOffset,
 					shouldEnable ? 0x40 : 0x0,
@@ -321,7 +321,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
 				this.sendMidiToDlive([
 					...SYSEX_HEADER,
-					0 + this.baseMidiChannel + midiChannelOffset,
+					this.baseMidiChannel + midiChannelOffset,
 					0x03,
 					channelNo + midiNoteOffset,
 					...stringToSysExBytes(name),
@@ -335,7 +335,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
 				this.sendMidiToDlive([
 					...SYSEX_HEADER,
-					0 + this.baseMidiChannel + midiChannelOffset,
+					this.baseMidiChannel + midiChannelOffset,
 					0x06,
 					channelNo + midiNoteOffset,
 					colour,

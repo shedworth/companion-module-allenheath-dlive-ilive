@@ -1,7 +1,7 @@
 {
 	"extends": "./tsconfig.build.json",
 	"compilerOptions": {
-		"types": ["node" /* , "jest" ] // uncomment this if using jest */],
+		"types": ["node", "jest"],
 		"strict": true
 	}
 }

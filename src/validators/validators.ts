@@ -1,5 +1,6 @@
 import { CompanionActionEvent } from '@companion-module/base'
 import { z } from 'zod'
+
 import {
 	CHANNEL_COLOURS,
 	CHANNEL_TYPES,
@@ -36,57 +37,68 @@ import {
 	STEREO_UFX_SEND_COUNT,
 	UFX_KEY_CHOICES,
 	UFX_SCALE_CHOICES,
-} from './constants.js'
-import { camelCase, fromPairs, map, pipe, toPairs } from 'lodash/fp'
+} from '../constants.js'
 
-const channelOptionsShape = {
-	channel_type: z.enum(CHANNEL_TYPES),
+/**
+ * Type helper that prepends a prefix to each key of a Zod shape using camel case
+ */
+type PrefixedShape<S extends z.ZodRawShape, P extends string> = {
+	[K in keyof S as P extends '' ? K : `${P}${Capitalize<string & K>}`]: S[K]
+}
+
+export const prefixShape = <S extends z.ZodRawShape, P extends string>(shape: S, prefix: P): PrefixedShape<S, P> =>
+	Object.fromEntries(
+		Object.entries(shape).map(([k, v]) => [prefix ? prefix + k.charAt(0).toUpperCase() + k.slice(1) : k, v]),
+	) as PrefixedShape<S, P>
+
+const channelOptions = {
+	channelType: z.enum(CHANNEL_TYPES),
 	input: z
 		.number()
 		.int()
 		.min(0)
 		.max(INPUT_CHANNEL_COUNT - 1),
-	mono_group: z
+	monoGroup: z
 		.number()
 		.int()
 		.min(0)
 		.max(MONO_GROUP_COUNT - 1),
-	stereo_group: z
+	stereoGroup: z
 		.number()
 		.int()
 		.min(0)
 		.max(STEREO_GROUP_COUNT - 1),
-	mono_aux: z
+	monoAux: z
 		.number()
 		.int()
 		.min(0)
 		.max(MONO_AUX_COUNT - 1),
-	stereo_aux: z
+	stereoAux: z
 		.number()
 		.int()
 		.min(0)
 		.max(STEREO_AUX_COUNT - 1),
-	mono_matrix: z
+	monoMatrix: z
 		.number()
 		.int()
 		.min(0)
 		.max(MONO_MATRIX_COUNT - 1),
-	stereo_matrix: z
+	stereoMatrix: z
 		.number()
 		.int()
 		.min(0)
 		.max(STEREO_MATRIX_COUNT - 1),
-	mono_fx_send: z
+	monoFxSend: z
 		.number()
 		.int()
 		.min(0)
 		.max(MONO_FX_SEND_COUNT - 1),
-	stereo_fx_send: z
+	stereoFxSend: z
 		.number()
 		.int()
 		.min(0)
 		.max(STEREO_FX_SEND_COUNT - 1),
-	fx_return: z
+	fxReturn: z
 		.number()
 		.int()
 		.min(0)
@@ -101,173 +113,144 @@ const channelOptionsShape = {
 		.int()
 		.min(0)
 		.max(DCA_COUNT - 1),
-	mute_group: z
+	muteGroup: z
 		.number()
 		.int()
 		.min(0)
 		.max(MUTE_GROUP_COUNT - 1),
-	stereo_ufx_send: z
+	stereoUfxSend: z
 		.number()
 		.int()
 		.min(0)
 		.max(STEREO_UFX_SEND_COUNT - 1),
-	stereo_ufx_return: z
+	stereoUfxReturn: z
 		.number()
 		.int()
 		.min(0)
 		.max(STEREO_UFX_RETURN_COUNT - 1),
 } as const
 
-const socketOptionsShape = {
-	socket_type: z.enum(SOCKET_TYPES),
-	mixrack_sockets_1_64: z
+const socketOptions = {
+	socketType: z.enum(SOCKET_TYPES),
+	mixrackSockets1To64: z
 		.number()
 		.int()
 		.min(0)
 		.max(MIXRACK_SOCKET_COUNT - 1),
-	mixrack_dx_1_2: z
+	mixrackDx1To2: z
 		.number()
 		.int()
 		.min(0)
 		.max(MIXRACK_DX_SOCKET_COUNT - 1),
-	mixrack_dx_3_4: z
+	mixrackDx3To4: z
 		.number()
 		.int()
 		.min(0)
 		.max(MIXRACK_DX_SOCKET_COUNT - 1),
 } as const
 
-type PrefixedShape<S extends z.ZodRawShape, P extends string> = {
-	[K in keyof S as `${P}_${string & K}`]: S[K]
-}
-
-const prefixShape = <S extends z.ZodRawShape, P extends string>(shape: S, prefix: P): PrefixedShape<S, P> => {
-	const out: any = {}
-	for (const [k, v] of Object.entries(shape)) {
-		const key = `${prefix ? prefix + '_' : ''}${k.charAt(0)}${k.slice(1)}`
-		out[key] = v
-	}
-	return out
-}
-
-const camelCaseKeys = pipe(toPairs, (pairs) => map(([key, value]) => [camelCase(key), value])(pairs), fromPairs)
-
-const camelCaseKeysSafe = <T extends Record<string, any>>(value: T): CamelizeKeys<T> =>
-	camelCaseKeys(value) as CamelizeKeys<T>
-
-const ChannelOptionsSchema = z.object(channelOptionsShape)
-
 const MuteActionSchema = z.object({
-	options: ChannelOptionsSchema.extend({
+	options: z.object({
+		...channelOptions,
 		mute: z.boolean(),
-	}).transform(camelCaseKeysSafe),
+	}),
 })
 
 const FaderLevelActionSchema = z.object({
-	options: ChannelOptionsSchema.extend({
+	options: z.object({
+		...channelOptions,
 		level: z.number().int().min(0).max(128),
-	}).transform(camelCaseKeysSafe),
+	}),
 })
 
 const AssignChannelToMainMixActionSchema = z.object({
-	options: ChannelOptionsSchema.extend({
+	options: z.object({
+		...channelOptions,
 		assign: z.boolean(),
-	}).transform(camelCaseKeysSafe),
+	}),
 })
 
 const AuxFXMatrixSendLevelActionSchema = z.object({
-	options: z
-		.object({
-			...channelOptionsShape,
-			...prefixShape(channelOptionsShape, 'destination'),
-			level: z.number().int().min(0).max(128),
-		})
-		.transform(camelCaseKeysSafe),
+	options: z.object({
+		...channelOptions,
+		...prefixShape(channelOptions, 'destination'),
+		level: z.number().int().min(0).max(128),
+	}),
 })
 
 const InputToGroupAuxOnActionSchema = z.object({
-	options: z
-		.object({
-			...prefixShape(channelOptionsShape, 'destination'),
-			level: z.number().int().min(0).max(128),
-			input: z
-				.number()
-				.int()
-				.min(0)
-				.max(INPUT_CHANNEL_COUNT - 1),
-		})
-		.transform(camelCaseKeysSafe),
+	options: z.object({
+		...prefixShape(channelOptions, 'destination'),
+		level: z.number().int().min(0).max(128),
+		input: z
+			.number()
+			.int()
+			.min(0)
+			.max(INPUT_CHANNEL_COUNT - 1),
+	}),
 })
 
 const DcaAssignActionSchema = z.object({
-	options: z
-		.object({
-			...channelOptionsShape,
-			destinationDca: z
-				.number()
-				.int()
-				.min(0)
-				.max(DCA_COUNT - 1),
-			assign: z.boolean(),
-		})
-		.transform(camelCaseKeysSafe),
+	options: z.object({
+		...channelOptions,
+		destinationDca: z
+			.number()
+			.int()
+			.min(0)
+			.max(DCA_COUNT - 1),
+		assign: z.boolean(),
+	}),
 })
 
 const MuteGroupAssignActionSchema = z.object({
-	options: z
-		.object({
-			...channelOptionsShape,
-			destinationMuteGroup: z
-				.number()
-				.int()
-				.min(0)
-				.max(MUTE_GROUP_COUNT - 1),
-			assign: z.boolean(),
-		})
-		.transform(camelCaseKeysSafe),
+	options: z.object({
+		...channelOptions,
+		destinationMuteGroup: z
+			.number()
+			.int()
+			.min(0)
+			.max(MUTE_GROUP_COUNT - 1),
+		assign: z.boolean(),
+	}),
 })
 
 const SetSocketPreampGainActionSchema = z.object({
-	options: z
-		.object({
-			...socketOptionsShape,
-			gain: z.number().min(PREAMP_MINIMUM_GAIN).max(PREAMP_MAXIMUM_GAIN),
-		})
-		.transform(camelCaseKeysSafe),
+	options: z.object({
+		...socketOptions,
+		gain: z.number().min(PREAMP_MINIMUM_GAIN).max(PREAMP_MAXIMUM_GAIN),
+	}),
 })
 
 const SetSocketPreampPadActionSchema = z.object({
-	options: z
-		.object({
-			...socketOptionsShape,
-			pad: z.boolean(),
-		})
-		.transform(camelCaseKeysSafe),
+	options: z.object({
+		...socketOptions,
+		pad: z.boolean(),
+	}),
 })
 
 const SetSocketPreamp48vActionSchema = z.object({
-	options: z
-		.object({
-			...socketOptionsShape,
-			phantom: z.boolean(),
-		})
-		.transform(camelCaseKeysSafe),
+	options: z.object({
+		...socketOptions,
+		phantom: z.boolean(),
+	}),
 })
 
 const SetChannelNameActionSchema = z.object({
-	options: ChannelOptionsSchema.extend({
+	options: z.object({
+		...channelOptions,
 		name: z.string(),
-	}).transform(camelCaseKeysSafe),
+	}),
 })
 
 const SetChannelColourActionSchema = z.object({
-	options: ChannelOptionsSchema.extend({
+	options: z.object({
+		...channelOptions,
 		colour: z
 			.number()
 			.int()
 			.min(0)
 			.max(CHANNEL_COLOURS.length - 1),
-	}).transform(camelCaseKeysSafe),
+	}),
 })
 
 const RecallSceneActionSchema = z.object({
@@ -298,13 +281,14 @@ const GoNextPreviousActionSchema = z.object({
 })
 
 const ParametricEqActionSchema = z.object({
-	options: ChannelOptionsSchema.extend({
+	options: z.object({
+		...channelOptions,
 		band: z.number().int().min(0).max(3),
 		type: z.enum(EQ_TYPES),
 		frequency: z.number().min(EQ_MINIMUM_FREQUENCY).max(EQ_MAXIMUM_FREQUENCY),
 		gain: z.number().min(EQ_MINIMUM_GAIN).max(EQ_MAXIMUM_GAIN),
 		width: z.number().min(EQ_MINIMUM_WIDTH).max(EQ_MAXIMUM_WIDTH),
-	}).transform(camelCaseKeysSafe),
+	}),
 })
 
 const HpfFrequencyActionSchema = z.object({
@@ -319,16 +303,14 @@ const HpfFrequencyActionSchema = z.object({
 })
 
 const SetHpfOnOffActionSchema = z.object({
-	options: z
-		.object({
-			input: z
-				.number()
-				.int()
-				.min(0)
-				.max(INPUT_CHANNEL_COUNT - 1),
-			hpf: z.boolean(),
-		})
-		.transform(camelCaseKeysSafe),
+	options: z.object({
+		input: z
+			.number()
+			.int()
+			.min(0)
+			.max(INPUT_CHANNEL_COUNT - 1),
+		hpf: z.boolean(),
+	}),
 })
 
 const SetUfxGlobalKeyActionSchema = z.object({

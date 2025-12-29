@@ -1,3 +1,5 @@
+import { camelCase } from 'lodash/fp'
+
 import {
 	CHANNEL_COLOUR_CHOICES,
 	CUE_LIST_COUNT,
@@ -19,11 +21,10 @@ import {
 	UFX_SCALE_CHOICES,
 } from './constants.js'
 import { ModuleInstance } from './main.js'
-import * as validators from './validators.js'
 import { getChannelSelectOptions } from './utils/getChannelSelectOptions.js'
 import { getChoices } from './utils/getInputFieldChoices.js'
-import { camelCase } from 'lodash/fp'
 import { getSocketSelectOptions } from './utils/getSocketSelectOptions.js'
+import * as validators from './validators/index.js'
 
 const toCamelCase = <const S extends string>(snakeCaseString: S): SnakeToCamel<S> =>
 	camelCase(snakeCaseString) as SnakeToCamel<S>
@@ -577,7 +578,6 @@ export const UpdateActions = (self: ModuleInstance): void => {
 				},
 			],
 			callback: async (action) => {
-				console.log({ action })
 				const { options } = validators.parseSetHpfOnOffAction(action)
 				self.sendCommand({
 					command: 'set_hpf_on_off',
