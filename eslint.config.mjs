@@ -3,7 +3,7 @@ import simpleImportSort from 'eslint-plugin-simple-import-sort'
 
 const baseConfig = await generateEslintConfig({
 	enableTypescript: true,
-	ignores: ['src/**/*spec.ts', 'src/**/__tests__/*', 'src/**/__mocks__/*', 'jest.config.ts'],
+	ignores: ['jest.config.ts'],
 	commonRules: {
 		'no-console': 2,
 	},
