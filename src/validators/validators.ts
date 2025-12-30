@@ -51,6 +51,22 @@ export const prefixShape = <S extends z.ZodRawShape, P extends string>(shape: S,
 		Object.entries(shape).map(([k, v]) => [prefix ? prefix + k.charAt(0).toUpperCase() + k.slice(1) : k, v]),
 	) as PrefixedShape<S, P>
 
+/**
+ * Schema representing the CompanionActionEvent interface, the base for all actions coming from Companion
+ */
+const InputValueSchema = z.union([z.number(), z.string(), z.boolean(), z.array(z.union([z.string(), z.number()]))])
+
+const CompanionActionEventBaseSchema = z.object({
+	surfaceId: z.string().optional(),
+	id: z.string(),
+	controlId: z.string(),
+	actionId: z.string(),
+	options: z.record(z.string(), InputValueSchema.optional()),
+})
+
+/**
+ * Object representing the options the getChannelSelectOptions function adds to a Companion action
+ */
 const channelOptions = {
 	channelType: z.enum(CHANNEL_TYPES),
 	input: z
@@ -130,6 +146,9 @@ const channelOptions = {
 		.max(STEREO_UFX_RETURN_COUNT - 1),
 } as const
 
+/**
+ * Object representing the options the getSocketSelectOptions function adds to a Companion action
+ */
 const socketOptions = {
 	socketType: z.enum(SOCKET_TYPES),
 	mixrackSockets1To64: z
@@ -149,7 +168,11 @@ const socketOptions = {
 		.max(MIXRACK_DX_SOCKET_COUNT - 1),
 } as const
 
-const MuteActionSchema = z.object({
+/**
+ * Schemas representing the options for each specific action
+ */
+
+const MuteActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...channelOptions,
 		mute: z.boolean(),
@@ -341,13 +364,16 @@ const SetUfxUnitParameterActionSchema = z.object({
 	}),
 })
 
+/**
+ * Schema representing the DLive module configuration
+ */
 const DliveModuleConfigSchema = z.object({
 	host: z.string(),
 	midiChannel: z.number().int().min(0).max(16),
 	midiPort: z.number().int().min(0).max(65535),
 })
 
-type MuteAction = z.infer<typeof MuteActionSchema>
+export type MuteAction = z.infer<typeof MuteActionSchema>
 
 type FaderLevelAction = z.infer<typeof FaderLevelActionSchema>
 
