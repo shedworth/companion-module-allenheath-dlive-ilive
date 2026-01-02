@@ -1,10 +1,11 @@
 import { CompanionActionContext, CompanionActionEvent } from '@companion-module/base'
-import { camelCase, noop } from 'lodash/fp'
+import { camelCase, indexOf, noop } from 'lodash/fp'
 
 import { UpdateActions } from '../../src/actions.js'
 import {
+	CHANNEL_COLOURS,
+	ChannelColour,
 	ChannelType,
-	DCA_COUNT,
 	FX_RETURN_COUNT,
 	INPUT_CHANNEL_COUNT,
 	MAIN_COUNT,
@@ -12,17 +13,17 @@ import {
 	MONO_FX_SEND_COUNT,
 	MONO_GROUP_COUNT,
 	MONO_MATRIX_COUNT,
-	MUTE_GROUP_COUNT,
 	STEREO_AUX_COUNT,
 	STEREO_FX_SEND_COUNT,
 	STEREO_GROUP_COUNT,
 	STEREO_MATRIX_COUNT,
 	STEREO_UFX_RETURN_COUNT,
 	STEREO_UFX_SEND_COUNT,
+	SYSEX_HEADER,
 } from '../../src/constants.js'
 import { ModuleInstance } from '../../src/main.js'
 import { getMidiOffsetsForChannelType } from '../../src/utils/index.js'
-import { MuteAction } from '../../src/validators/index.js'
+import { SetChannelColourAction } from '../../src/validators/index.js'
 import { MockModuleInstance } from '../utils/MockModuleInstance.js'
 
 jest.mock('@companion-module/base', () => {
@@ -35,7 +36,7 @@ jest.mock('@companion-module/base', () => {
 	}
 })
 
-describe('mute action', () => {
+describe('setChannelColour action', () => {
 	let moduleInstance: MockModuleInstance
 	let sendMidiToDliveSpy: jest.SpyInstance
 
@@ -72,6 +73,7 @@ describe('mute action', () => {
 		id: '',
 	}
 
+	// Test channel types (all types)
 	const testCases: [ChannelType, number][] = [
 		['input', INPUT_CHANNEL_COUNT],
 		['mono_group', MONO_GROUP_COUNT],
@@ -84,73 +86,49 @@ describe('mute action', () => {
 		['stereo_fx_send', STEREO_FX_SEND_COUNT],
 		['fx_return', FX_RETURN_COUNT],
 		['main', MAIN_COUNT],
-		['mute_group', MUTE_GROUP_COUNT],
 		['stereo_ufx_send', STEREO_UFX_SEND_COUNT],
 		['stereo_ufx_return', STEREO_UFX_RETURN_COUNT],
-		['dca', DCA_COUNT],
 	]
 
-	describe.each(testCases)('should mute %s', (channelType, channelCount) => {
-		// Test first and last channel
-		const testChannels = [0, channelCount - 1]
+	// Test first, middle, and last colour
+	const testColours: ChannelColour[] = ['off', 'yellow', 'white']
 
-		it.each(testChannels)('channel %s', (channelIndex) => {
-			const muteOnAction: MuteAction = {
-				...baseAction,
-				options: {
-					...baseAction.options,
-					channelType,
-					mute: true,
-					[camelCase(channelType)]: channelIndex,
-				},
-			}
+	describe.each(testCases)('channel type %s', (channelType, channelCount) => {
+		// Test first and last channel for each channel type
+		const testChannels = [1, channelCount]
 
-			void moduleInstance.actionDefinitions.mute?.callback?.(
-				muteOnAction as CompanionActionEvent,
-				{} as CompanionActionContext,
-			)
+		describe.each(testChannels)('channel %s', (channelNo: number) => {
+			it.each(testColours)('colour=%s', (colour) => {
+				const channelIndex = channelNo - 1
+				const colourIndex = indexOf(colour, CHANNEL_COLOURS)
 
-			const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
+				const setChannelColourAction: SetChannelColourAction = {
+					...baseAction,
+					options: {
+						...baseAction.options,
+						channelType,
+						colour: colourIndex,
+						[camelCase(channelType)]: channelIndex,
+					},
+				}
 
-			expect(sendMidiToDliveSpy).toHaveBeenCalledWith([
-				0x90 + midiChannelOffset,
-				channelIndex + midiNoteOffset,
-				0x7f,
-				channelIndex + midiNoteOffset,
-				0x00,
-			])
-		})
-	})
+				void moduleInstance.actionDefinitions.setChannelColour?.callback?.(
+					setChannelColourAction as CompanionActionEvent,
+					{} as CompanionActionContext,
+				)
 
-	describe.each(testCases)('should unmute %s', (channelType, channelCount) => {
-		// Test first and last channel
-		const testChannels = [0, channelCount - 1]
+				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
 
-		it.each(testChannels)('channel %s', (channelIndex) => {
-			const muteOnAction: MuteAction = {
-				...baseAction,
-				options: {
-					...baseAction.options,
-					channelType,
-					mute: false,
-					[camelCase(channelType)]: channelIndex,
-				},
-			}
-
-			void moduleInstance.actionDefinitions.mute?.callback?.(
-				muteOnAction as CompanionActionEvent,
-				{} as CompanionActionContext,
-			)
-
-			const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
-
-			expect(sendMidiToDliveSpy).toHaveBeenCalledWith([
-				0x90 + midiChannelOffset,
-				channelIndex + midiNoteOffset,
-				0x3f,
-				channelIndex + midiNoteOffset,
-				0x00,
-			])
+				expect(sendMidiToDliveSpy).toHaveBeenCalledTimes(1)
+				expect(sendMidiToDliveSpy).toHaveBeenCalledWith([
+					...SYSEX_HEADER,
+					midiChannelOffset,
+					0x06,
+					channelIndex + midiNoteOffset,
+					colourIndex,
+					0xf7,
+				])
+			})
 		})
 	})
 })

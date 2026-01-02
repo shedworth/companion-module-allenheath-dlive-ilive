@@ -6,16 +6,12 @@ import {
 	CHANNEL_TYPES,
 	CUE_LIST_COUNT,
 	DCA_COUNT,
-	EQ_MAXIMUM_FREQUENCY,
 	EQ_MAXIMUM_GAIN,
 	EQ_MAXIMUM_WIDTH,
-	EQ_MINIMUM_FREQUENCY,
 	EQ_MINIMUM_GAIN,
 	EQ_MINIMUM_WIDTH,
 	EQ_TYPES,
 	FX_RETURN_COUNT,
-	HPF_MAXIMUM_FREQUENCY,
-	HPF_MINIMUM_FREQUENCY,
 	INPUT_CHANNEL_COUNT,
 	MAIN_COUNT,
 	MIXRACK_DX_SOCKET_COUNT,
@@ -179,21 +175,21 @@ const MuteActionSchema = CompanionActionEventBaseSchema.extend({
 	}),
 })
 
-const FaderLevelActionSchema = z.object({
+const FaderLevelActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...channelOptions,
 		level: z.number().int().min(0).max(128),
 	}),
 })
 
-const AssignChannelToMainMixActionSchema = z.object({
+const AssignChannelToMainMixActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...channelOptions,
 		assign: z.boolean(),
 	}),
 })
 
-const AuxFXMatrixSendLevelActionSchema = z.object({
+const AuxFXMatrixSendLevelActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...channelOptions,
 		...prefixShape(channelOptions, 'destination'),
@@ -201,10 +197,9 @@ const AuxFXMatrixSendLevelActionSchema = z.object({
 	}),
 })
 
-const InputToGroupAuxOnActionSchema = z.object({
+const InputToGroupAuxOnActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...prefixShape(channelOptions, 'destination'),
-		level: z.number().int().min(0).max(128),
 		input: z
 			.number()
 			.int()
@@ -213,7 +208,7 @@ const InputToGroupAuxOnActionSchema = z.object({
 	}),
 })
 
-const DcaAssignActionSchema = z.object({
+const DcaAssignActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...channelOptions,
 		destinationDca: z
@@ -225,7 +220,7 @@ const DcaAssignActionSchema = z.object({
 	}),
 })
 
-const MuteGroupAssignActionSchema = z.object({
+const MuteGroupAssignActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...channelOptions,
 		destinationMuteGroup: z
@@ -237,35 +232,35 @@ const MuteGroupAssignActionSchema = z.object({
 	}),
 })
 
-const SetSocketPreampGainActionSchema = z.object({
+const SetSocketPreampGainActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...socketOptions,
 		gain: z.number().min(PREAMP_MINIMUM_GAIN).max(PREAMP_MAXIMUM_GAIN),
 	}),
 })
 
-const SetSocketPreampPadActionSchema = z.object({
+const SetSocketPreampPadActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...socketOptions,
 		pad: z.boolean(),
 	}),
 })
 
-const SetSocketPreamp48vActionSchema = z.object({
+const SetSocketPreamp48vActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...socketOptions,
 		phantom: z.boolean(),
 	}),
 })
 
-const SetChannelNameActionSchema = z.object({
+const SetChannelNameActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...channelOptions,
 		name: z.string(),
 	}),
 })
 
-const SetChannelColourActionSchema = z.object({
+const SetChannelColourActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...channelOptions,
 		colour: z
@@ -276,7 +271,7 @@ const SetChannelColourActionSchema = z.object({
 	}),
 })
 
-const RecallSceneActionSchema = z.object({
+const RecallSceneActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		scene: z
 			.number()
@@ -286,7 +281,7 @@ const RecallSceneActionSchema = z.object({
 	}),
 })
 
-const RecallCueListActionSchema = z.object({
+const RecallCueListActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		recallId: z
 			.number()
@@ -296,36 +291,36 @@ const RecallCueListActionSchema = z.object({
 	}),
 })
 
-const GoNextPreviousActionSchema = z.object({
+const GoNextPreviousActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		controlNumber: z.number().int().min(0).max(127),
 		controlValue: z.number().int().min(0).max(127),
 	}),
 })
 
-const ParametricEqActionSchema = z.object({
+const ParametricEqActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...channelOptions,
 		band: z.number().int().min(0).max(3),
 		type: z.enum(EQ_TYPES),
-		frequency: z.number().min(EQ_MINIMUM_FREQUENCY).max(EQ_MAXIMUM_FREQUENCY),
+		frequency: z.number().min(0).max(127),
 		gain: z.number().min(EQ_MINIMUM_GAIN).max(EQ_MAXIMUM_GAIN),
 		width: z.number().min(EQ_MINIMUM_WIDTH).max(EQ_MAXIMUM_WIDTH),
 	}),
 })
 
-const HpfFrequencyActionSchema = z.object({
+const HpfFrequencyActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		input: z
 			.number()
 			.int()
 			.min(0)
 			.max(INPUT_CHANNEL_COUNT - 1),
-		frequency: z.number().min(HPF_MINIMUM_FREQUENCY).max(HPF_MAXIMUM_FREQUENCY),
+		frequency: z.number().min(0).max(127),
 	}),
 })
 
-const SetHpfOnOffActionSchema = z.object({
+const SetHpfOnOffActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		input: z
 			.number()
@@ -336,7 +331,7 @@ const SetHpfOnOffActionSchema = z.object({
 	}),
 })
 
-const SetUfxGlobalKeyActionSchema = z.object({
+const SetUfxGlobalKeyActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		key: z
 			.number()
@@ -346,7 +341,7 @@ const SetUfxGlobalKeyActionSchema = z.object({
 	}),
 })
 
-const SetUfxGlobalScaleActionSchema = z.object({
+const SetUfxGlobalScaleActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		scale: z
 			.number()
@@ -356,7 +351,7 @@ const SetUfxGlobalScaleActionSchema = z.object({
 	}),
 })
 
-const SetUfxUnitParameterActionSchema = z.object({
+const SetUfxUnitParameterActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		midiChannel: z.number().int().min(1).max(16),
 		controlNumber: z.number().int().min(0).max(127),
@@ -375,45 +370,45 @@ const DliveModuleConfigSchema = z.object({
 
 export type MuteAction = z.infer<typeof MuteActionSchema>
 
-type FaderLevelAction = z.infer<typeof FaderLevelActionSchema>
+export type FaderLevelAction = z.infer<typeof FaderLevelActionSchema>
 
-type AssignChannelToMainMixAction = z.infer<typeof AssignChannelToMainMixActionSchema>
+export type AssignChannelToMainMixAction = z.infer<typeof AssignChannelToMainMixActionSchema>
 
-type AuxFXMatrixSendLevelAction = z.infer<typeof AuxFXMatrixSendLevelActionSchema>
+export type AuxFXMatrixSendLevelAction = z.infer<typeof AuxFXMatrixSendLevelActionSchema>
 
-type InputToGroupAuxOnAction = z.infer<typeof InputToGroupAuxOnActionSchema>
+export type InputToGroupAuxOnAction = z.infer<typeof InputToGroupAuxOnActionSchema>
 
-type DcaAssignAction = z.infer<typeof DcaAssignActionSchema>
+export type DcaAssignAction = z.infer<typeof DcaAssignActionSchema>
 
-type MuteGroupAssignAction = z.infer<typeof MuteGroupAssignActionSchema>
+export type MuteGroupAssignAction = z.infer<typeof MuteGroupAssignActionSchema>
 
-type SetSocketPreampGainAction = z.infer<typeof SetSocketPreampGainActionSchema>
+export type SetSocketPreampGainAction = z.infer<typeof SetSocketPreampGainActionSchema>
 
-type SetSocketPreampPadAction = z.infer<typeof SetSocketPreampPadActionSchema>
+export type SetSocketPreampPadAction = z.infer<typeof SetSocketPreampPadActionSchema>
 
-type SetSocketPreamp48vAction = z.infer<typeof SetSocketPreamp48vActionSchema>
+export type SetSocketPreamp48vAction = z.infer<typeof SetSocketPreamp48vActionSchema>
 
-type SetChannelNameAction = z.infer<typeof SetChannelNameActionSchema>
+export type SetChannelNameAction = z.infer<typeof SetChannelNameActionSchema>
 
-type SetChannelColourAction = z.infer<typeof SetChannelColourActionSchema>
+export type SetChannelColourAction = z.infer<typeof SetChannelColourActionSchema>
 
-type RecallSceneAction = z.infer<typeof RecallSceneActionSchema>
+export type RecallSceneAction = z.infer<typeof RecallSceneActionSchema>
 
-type RecallCueListAction = z.infer<typeof RecallCueListActionSchema>
+export type RecallCueListAction = z.infer<typeof RecallCueListActionSchema>
 
-type GoNextPreviousAction = z.infer<typeof GoNextPreviousActionSchema>
+export type GoNextPreviousAction = z.infer<typeof GoNextPreviousActionSchema>
 
-type ParametricEqAction = z.infer<typeof ParametricEqActionSchema>
+export type ParametricEqAction = z.infer<typeof ParametricEqActionSchema>
 
-type HpfFrequencyAction = z.infer<typeof HpfFrequencyActionSchema>
+export type HpfFrequencyAction = z.infer<typeof HpfFrequencyActionSchema>
 
-type SetHpfOnOffAction = z.infer<typeof SetHpfOnOffActionSchema>
+export type SetHpfOnOffAction = z.infer<typeof SetHpfOnOffActionSchema>
 
-type SetUfxGlobalKeyAction = z.infer<typeof SetUfxGlobalKeyActionSchema>
+export type SetUfxGlobalKeyAction = z.infer<typeof SetUfxGlobalKeyActionSchema>
 
-type SetUfxGlobalScaleAction = z.infer<typeof SetUfxGlobalScaleActionSchema>
+export type SetUfxGlobalScaleAction = z.infer<typeof SetUfxGlobalScaleActionSchema>
 
-type SetUfxUnitParameterAction = z.infer<typeof SetUfxUnitParameterActionSchema>
+export type SetUfxUnitParameterAction = z.infer<typeof SetUfxUnitParameterActionSchema>
 
 export const parseMuteAction = (action: CompanionActionEvent): MuteAction => MuteActionSchema.parse(action)
 

@@ -12,7 +12,6 @@ import {
 	MONO_FX_SEND_COUNT,
 	MONO_GROUP_COUNT,
 	MONO_MATRIX_COUNT,
-	MUTE_GROUP_COUNT,
 	STEREO_AUX_COUNT,
 	STEREO_FX_SEND_COUNT,
 	STEREO_GROUP_COUNT,
@@ -22,7 +21,7 @@ import {
 } from '../../src/constants.js'
 import { ModuleInstance } from '../../src/main.js'
 import { getMidiOffsetsForChannelType } from '../../src/utils/index.js'
-import { MuteAction } from '../../src/validators/index.js'
+import { DcaAssignAction } from '../../src/validators/index.js'
 import { MockModuleInstance } from '../utils/MockModuleInstance.js'
 
 jest.mock('@companion-module/base', () => {
@@ -35,7 +34,7 @@ jest.mock('@companion-module/base', () => {
 	}
 })
 
-describe('mute action', () => {
+describe('dcaAssign action', () => {
 	let moduleInstance: MockModuleInstance
 	let sendMidiToDliveSpy: jest.SpyInstance
 
@@ -66,12 +65,14 @@ describe('mute action', () => {
 			muteGroup: 0,
 			stereoUfxReturn: 0,
 			stereoUfxSend: 0,
+			destinationDca: 0,
 		},
 		actionId: '',
 		controlId: '',
 		id: '',
 	}
 
+	// Test channel types (all except dca and mute_group)
 	const testCases: [ChannelType, number][] = [
 		['input', INPUT_CHANNEL_COUNT],
 		['mono_group', MONO_GROUP_COUNT],
@@ -84,73 +85,55 @@ describe('mute action', () => {
 		['stereo_fx_send', STEREO_FX_SEND_COUNT],
 		['fx_return', FX_RETURN_COUNT],
 		['main', MAIN_COUNT],
-		['mute_group', MUTE_GROUP_COUNT],
 		['stereo_ufx_send', STEREO_UFX_SEND_COUNT],
 		['stereo_ufx_return', STEREO_UFX_RETURN_COUNT],
-		['dca', DCA_COUNT],
 	]
 
-	describe.each(testCases)('should mute %s', (channelType, channelCount) => {
-		// Test first and last channel
-		const testChannels = [0, channelCount - 1]
+	const testAssignStates = [true, false]
 
-		it.each(testChannels)('channel %s', (channelIndex) => {
-			const muteOnAction: MuteAction = {
-				...baseAction,
-				options: {
-					...baseAction.options,
-					channelType,
-					mute: true,
-					[camelCase(channelType)]: channelIndex,
-				},
-			}
+	// Test first and last DCA
+	const testDcas = [1, DCA_COUNT]
 
-			void moduleInstance.actionDefinitions.mute?.callback?.(
-				muteOnAction as CompanionActionEvent,
-				{} as CompanionActionContext,
-			)
+	describe.each(testCases)('channel type %s', (channelType, channelCount) => {
+		// Test first and last channel for each channel type
+		const testChannels = [1, channelCount]
 
-			const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
+		describe.each(testChannels)('channel %s', (channelNo: number) => {
+			describe.each(testDcas)('DCA %s', (dcaNo: number) => {
+				it.each(testAssignStates)('assign=%s', (assign) => {
+					const channelIndex = channelNo - 1
+					const dcaIndex = dcaNo - 1
 
-			expect(sendMidiToDliveSpy).toHaveBeenCalledWith([
-				0x90 + midiChannelOffset,
-				channelIndex + midiNoteOffset,
-				0x7f,
-				channelIndex + midiNoteOffset,
-				0x00,
-			])
-		})
-	})
+					const dcaAssignAction: DcaAssignAction = {
+						...baseAction,
+						options: {
+							...baseAction.options,
+							channelType,
+							assign,
+							destinationDca: dcaIndex,
+							[camelCase(channelType)]: channelIndex,
+						},
+					}
 
-	describe.each(testCases)('should unmute %s', (channelType, channelCount) => {
-		// Test first and last channel
-		const testChannels = [0, channelCount - 1]
+					void moduleInstance.actionDefinitions.dcaAssign?.callback?.(
+						dcaAssignAction as CompanionActionEvent,
+						{} as CompanionActionContext,
+					)
 
-		it.each(testChannels)('channel %s', (channelIndex) => {
-			const muteOnAction: MuteAction = {
-				...baseAction,
-				options: {
-					...baseAction.options,
-					channelType,
-					mute: false,
-					[camelCase(channelType)]: channelIndex,
-				},
-			}
+					const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
 
-			void moduleInstance.actionDefinitions.mute?.callback?.(
-				muteOnAction as CompanionActionEvent,
-				{} as CompanionActionContext,
-			)
-
-			const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
-
-			expect(sendMidiToDliveSpy).toHaveBeenCalledWith([
-				0x90 + midiChannelOffset,
-				channelIndex + midiNoteOffset,
-				0x3f,
-				channelIndex + midiNoteOffset,
-				0x00,
-			])
+					expect(sendMidiToDliveSpy).toHaveBeenCalledTimes(1)
+					expect(sendMidiToDliveSpy).toHaveBeenCalledWith([
+						0xb0 + midiChannelOffset,
+						0x63,
+						channelIndex + midiNoteOffset,
+						0x62,
+						0x40,
+						0x06,
+						assign ? dcaIndex + 0x40 : dcaIndex,
+					])
+				})
+			})
 		})
 	})
 })
