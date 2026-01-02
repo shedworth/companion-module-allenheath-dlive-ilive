@@ -1,7 +1,7 @@
 import { DropdownChoice } from '@companion-module/base'
 import { times } from 'lodash/fp'
 
-import { midiValueToEqFrequency, midiValueToHpfFrequency } from './utils/midiValueConverters.js'
+import { midiValueToEqFrequency, midiValueToHpfFrequency } from './utils/index.js'
 
 export const INPUT_CHANNEL_COUNT = 128
 export const MONO_GROUP_COUNT = 62
@@ -214,7 +214,7 @@ export const EQ_PARAMETER_MIDI_VALUES_FOR_BANDS: Record<number, EqMidiParameters
 export const FADER_LEVEL_CHOICES: DropdownChoice[] = times((index: number) => {
 	const id = FADER_STEP_COUNT - 1 - index
 	const dbLevel = ((id - 107) / 2).toFixed(1)
-	const levelString = id == 0 ? '-INF' : dbLevel
+	const levelString = id === 0 ? '-INF' : dbLevel
 	return { label: `${levelString} dB`, id }
 })(FADER_STEP_COUNT)
 

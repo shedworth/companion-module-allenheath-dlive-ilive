@@ -18,13 +18,13 @@ import {
 	SocketType,
 	SYSEX_HEADER,
 } from './constants.js'
-import { getMidiOffsetsForChannelType } from './utils/getMidiOffsetsForChannelType.js'
 import {
-	convertEqGainToMidiValue,
-	convertEqWidthToMidiValue,
-	convertPreampGainToMidiValue,
-} from './utils/midiValueConverters.js'
-import { stringToSysExBytes } from './utils/stringToSysExBytes.js'
+	eqGainToMidiValue,
+	eqWidthToMidiValue,
+	getMidiOffsetsForChannelType,
+	preampGainToMidiValue,
+	stringToMidiBytes,
+} from './utils/index.js'
 import { parseDliveModuleConfig } from './validators/index.js'
 
 export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
@@ -281,7 +281,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 			case 'set_socket_preamp_gain': {
 				const { socketNo, socketType, gain } = params
 				const midiNoteOffset = SOCKET_MIDI_NOTE_OFFSETS[socketType as SocketType]
-				const gainMidiValue = convertPreampGainToMidiValue(gain)
+				const gainMidiValue = preampGainToMidiValue(gain)
 				this.sendMidiToDlive([0xe0 + this.baseMidiChannel, socketNo + midiNoteOffset, gainMidiValue])
 				break
 			}
@@ -324,7 +324,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 					this.baseMidiChannel + midiChannelOffset,
 					0x03,
 					channelNo + midiNoteOffset,
-					...stringToSysExBytes(name),
+					...stringToMidiBytes(name),
 					0xf7,
 				])
 				break
@@ -374,8 +374,8 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				const { channelNo, channelType, bandNo, frequency, type, gain, width } = params
 				const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
 
-				const gainMidiValue = convertEqGainToMidiValue(gain)
-				const widthMidiValue = convertEqWidthToMidiValue(width)
+				const gainMidiValue = eqGainToMidiValue(gain)
+				const widthMidiValue = eqWidthToMidiValue(width)
 				const typeMidiValue = indexOf(type, EQ_TYPES)
 
 				const parameterMidiValuesForBand = EQ_PARAMETER_MIDI_VALUES_FOR_BANDS[bandNo]

@@ -21,17 +21,27 @@ import {
 	STEREO_UFX_RETURN_COUNT,
 	STEREO_UFX_SEND_COUNT,
 } from '../constants.js'
-import { getChoices } from './getInputFieldChoices.js'
+import { makeDropdownChoices } from './makeDropdownChoices.js'
 
-const prependPrefix = (text: string, prefix?: string) =>
+export const prependPrefix = (text: string, prefix?: string): string =>
 	prefix ? prefix + text.charAt(0).toUpperCase() + text.slice(1) : text
 
 interface GetChannelSelectOptionsArgs {
+	/** Array of channel types to exclude from the channel type selector dropdown */
 	exclude?: ChannelType[]
+	/** Array of channel types to include in the channel type selector dropdown */
 	include?: ChannelType[]
+	/** Prefix to prepend to the channel type, e.g. 'destination', 'source' etc */
 	prefix?: string
 }
 
+/**
+ * Helper to create a set of fields for a Companion action that allow selection of a channel type and number.
+ * These appear in the Companion UI as two dropdowns: one for choosing the channel type, e.g. 'Input' and
+ * another for choosing the channel, e.g. 'Input 1'
+ * @param args Args as defined in GetChannelSelectOptionsArgs interface
+ * @returns Array of Companion action input fields
+ */
 export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): SomeCompanionActionInputField[] => {
 	const exclude = args?.exclude ?? []
 	const include = args?.include ?? CHANNEL_TYPE_CHOICES.map((c) => c.id)
@@ -56,7 +66,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Input Channel',
 			id: prependPrefix('input', prefix),
 			default: 0,
-			choices: getChoices('Input Channel', INPUT_CHANNEL_COUNT),
+			choices: makeDropdownChoices('Input Channel', INPUT_CHANNEL_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "input"`,
 		},
@@ -65,7 +75,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Mono Group',
 			id: prependPrefix('monoGroup', prefix),
 			default: 0,
-			choices: getChoices('Mono Group', MONO_GROUP_COUNT),
+			choices: makeDropdownChoices('Mono Group', MONO_GROUP_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "mono_group"`,
 		},
@@ -74,7 +84,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Stereo Group',
 			id: prependPrefix('stereoGroup', prefix),
 			default: 0,
-			choices: getChoices('Stereo Group', STEREO_GROUP_COUNT),
+			choices: makeDropdownChoices('Stereo Group', STEREO_GROUP_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "stereo_group"`,
 		},
@@ -83,7 +93,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Mono Aux',
 			id: prependPrefix('monoAux', prefix),
 			default: 0,
-			choices: getChoices('Mono Aux', MONO_AUX_COUNT),
+			choices: makeDropdownChoices('Mono Aux', MONO_AUX_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "mono_aux"`,
 		},
@@ -92,7 +102,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Stereo Aux',
 			id: prependPrefix('stereoAux', prefix),
 			default: 0,
-			choices: getChoices('Stereo Aux', STEREO_AUX_COUNT),
+			choices: makeDropdownChoices('Stereo Aux', STEREO_AUX_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "stereo_aux"`,
 		},
@@ -101,7 +111,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Mono Matrix',
 			id: prependPrefix('monoMatrix', prefix),
 			default: 0,
-			choices: getChoices('Mono Matrix', MONO_MATRIX_COUNT),
+			choices: makeDropdownChoices('Mono Matrix', MONO_MATRIX_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "mono_matrix"`,
 		},
@@ -110,7 +120,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Stereo Matrix',
 			id: prependPrefix('stereoMatrix', prefix),
 			default: 0,
-			choices: getChoices('Stereo Matrix', STEREO_MATRIX_COUNT),
+			choices: makeDropdownChoices('Stereo Matrix', STEREO_MATRIX_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "stereo_matrix"`,
 		},
@@ -119,7 +129,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Mono FX Send',
 			id: prependPrefix('monoFxSend', prefix),
 			default: 0,
-			choices: getChoices('Mono FX Send', MONO_FX_SEND_COUNT),
+			choices: makeDropdownChoices('Mono FX Send', MONO_FX_SEND_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "mono_fx_send"`,
 		},
@@ -128,7 +138,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Stereo FX Send',
 			id: prependPrefix('stereoFxSend', prefix),
 			default: 0,
-			choices: getChoices('Stereo FX Send', STEREO_FX_SEND_COUNT),
+			choices: makeDropdownChoices('Stereo FX Send', STEREO_FX_SEND_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "stereo_fx_send"`,
 		},
@@ -137,7 +147,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'FX Return',
 			id: prependPrefix('fxReturn', prefix),
 			default: 0,
-			choices: getChoices('FX Return', FX_RETURN_COUNT),
+			choices: makeDropdownChoices('FX Return', FX_RETURN_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "fx_return"`,
 		},
@@ -146,7 +156,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Main',
 			id: prependPrefix('main', prefix),
 			default: 0,
-			choices: getChoices('Main', MAIN_COUNT),
+			choices: makeDropdownChoices('Main', MAIN_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "main"`,
 		},
@@ -155,7 +165,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'DCA',
 			id: prependPrefix('dca', prefix),
 			default: 0,
-			choices: getChoices('DCA', DCA_COUNT),
+			choices: makeDropdownChoices('DCA', DCA_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "dca"`,
 		},
@@ -164,7 +174,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Mute Group',
 			id: prependPrefix('muteGroup', prefix),
 			default: 0,
-			choices: getChoices('Mute Group', MUTE_GROUP_COUNT),
+			choices: makeDropdownChoices('Mute Group', MUTE_GROUP_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "mute_group"`,
 		},
@@ -173,7 +183,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Stereo UFX Send',
 			id: prependPrefix('stereoUfxSend', prefix),
 			default: 0,
-			choices: getChoices('Stereo UFX Send', STEREO_UFX_SEND_COUNT),
+			choices: makeDropdownChoices('Stereo UFX Send', STEREO_UFX_SEND_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "stereo_ufx_send"`,
 		},
@@ -182,7 +192,7 @@ export const getChannelSelectOptions = (args?: GetChannelSelectOptionsArgs): Som
 			label: 'Stereo UFX Return',
 			id: prependPrefix('stereoUfxReturn', prefix),
 			default: 0,
-			choices: getChoices('Stereo UFX Return', STEREO_UFX_RETURN_COUNT),
+			choices: makeDropdownChoices('Stereo UFX Return', STEREO_UFX_RETURN_COUNT),
 			minChoicesForSearch: 0,
 			isVisibleExpression: `$(options:${prependPrefix('channelType', prefix)}) == "stereo_ufx_return"`,
 		},

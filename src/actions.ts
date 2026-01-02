@@ -21,12 +21,10 @@ import {
 	UFX_SCALE_CHOICES,
 } from './constants.js'
 import { ModuleInstance } from './main.js'
-import { getChannelSelectOptions } from './utils/getChannelSelectOptions.js'
-import { getChoices } from './utils/getInputFieldChoices.js'
-import { getSocketSelectOptions } from './utils/getSocketSelectOptions.js'
+import { getChannelSelectOptions, getSocketSelectOptions, makeDropdownChoices } from './utils/index.js'
 import * as validators from './validators/index.js'
 
-const toCamelCase = <const S extends string>(snakeCaseString: S): SnakeToCamel<S> =>
+const camelCaseStringLiteral = <const S extends string>(snakeCaseString: S): SnakeToCamel<S> =>
 	camelCase(snakeCaseString) as SnakeToCamel<S>
 
 export const UpdateActions = (companionModule: ModuleInstance): void => {
@@ -48,7 +46,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					command: options.mute ? 'mute_on' : 'mute_off',
 					params: {
 						channelType: options.channelType,
-						channelNo: options[toCamelCase(options.channelType)],
+						channelNo: options[camelCaseStringLiteral(options.channelType)],
 					},
 				})
 			},
@@ -73,7 +71,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					command: 'fader_level',
 					params: {
 						channelType: options.channelType,
-						channelNo: options[toCamelCase(options.channelType)],
+						channelNo: options[camelCaseStringLiteral(options.channelType)],
 						level: options.level,
 					},
 				})
@@ -110,7 +108,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					command: options.assign ? 'channel_assignment_to_main_mix_on' : 'channel_assignment_to_main_mix_off',
 					params: {
 						channelType: options.channelType,
-						channelNo: options[toCamelCase(options.channelType)],
+						channelNo: options[camelCaseStringLiteral(options.channelType)],
 					},
 				})
 			},
@@ -151,9 +149,9 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					command: 'aux_fx_matrix_send_level',
 					params: {
 						channelType: options.channelType,
-						channelNo: options[toCamelCase(options.channelType)],
+						channelNo: options[camelCaseStringLiteral(options.channelType)],
 						destinationChannelType: options.destinationChannelType,
-						destinationChannelNo: options[toCamelCase(`destination_${options.destinationChannelType}`)],
+						destinationChannelNo: options[camelCaseStringLiteral(`destination_${options.destinationChannelType}`)],
 						level: options.level,
 					},
 				})
@@ -168,7 +166,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					label: 'Input Channel',
 					id: 'input',
 					default: 0,
-					choices: getChoices('Input Channel', INPUT_CHANNEL_COUNT),
+					choices: makeDropdownChoices('Input Channel', INPUT_CHANNEL_COUNT),
 					minChoicesForSearch: 0,
 				},
 				...getChannelSelectOptions({
@@ -183,7 +181,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					params: {
 						channelNo: options.input,
 						destinationChannelType: options.destinationChannelType,
-						destinationChannelNo: options[toCamelCase(`destination_${options.destinationChannelType}`)],
+						destinationChannelNo: options[camelCaseStringLiteral(`destination_${options.destinationChannelType}`)],
 					},
 				})
 			},
@@ -200,7 +198,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					label: 'DCA',
 					id: 'destinationDca',
 					default: 0,
-					choices: getChoices('DCA', DCA_COUNT),
+					choices: makeDropdownChoices('DCA', DCA_COUNT),
 					minChoicesForSearch: 0,
 				},
 				{
@@ -216,7 +214,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					command: options.assign ? 'dca_assignment_on' : 'dca_assignment_off',
 					params: {
 						channelType: options.channelType,
-						channelNo: options[toCamelCase(options.channelType)],
+						channelNo: options[camelCaseStringLiteral(options.channelType)],
 						dcaNo: options.destinationDca,
 					},
 				})
@@ -234,7 +232,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					label: 'Mute Group',
 					id: 'destinationMuteGroup',
 					default: 0,
-					choices: getChoices('Mute Group', MUTE_GROUP_COUNT),
+					choices: makeDropdownChoices('Mute Group', MUTE_GROUP_COUNT),
 					minChoicesForSearch: 0,
 				},
 				{
@@ -250,7 +248,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					command: options.assign ? 'mute_group_assignment_on' : 'mute_group_assignment_off',
 					params: {
 						channelType: options.channelType,
-						channelNo: options[toCamelCase(options.channelType)],
+						channelNo: options[camelCaseStringLiteral(options.channelType)],
 						muteGroupNo: options.destinationMuteGroup,
 					},
 				})
@@ -278,7 +276,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					command: 'set_socket_preamp_gain',
 					params: {
 						socketType: options.socketType,
-						socketNo: options[toCamelCase(options.socketType)],
+						socketNo: options[camelCaseStringLiteral(options.socketType)],
 						gain: options.gain,
 					},
 				})
@@ -302,7 +300,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					command: 'set_socket_preamp_pad',
 					params: {
 						socketType: options.socketType,
-						socketNo: options[toCamelCase(options.socketType)],
+						socketNo: options[camelCaseStringLiteral(options.socketType)],
 						shouldEnable: options.pad,
 					},
 				})
@@ -326,7 +324,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					command: 'set_socket_preamp_48v',
 					params: {
 						socketType: options.socketType,
-						socketNo: options[toCamelCase(options.socketType)],
+						socketNo: options[camelCaseStringLiteral(options.socketType)],
 						shouldEnable: options.phantom,
 					},
 				})
@@ -350,7 +348,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					command: 'set_channel_name',
 					params: {
 						channelType: options.channelType,
-						channelNo: options[toCamelCase(options.channelType)],
+						channelNo: options[camelCaseStringLiteral(options.channelType)],
 						name: options.name,
 					},
 				})
@@ -375,7 +373,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					command: 'set_channel_colour',
 					params: {
 						channelType: options.channelType,
-						channelNo: options[toCamelCase(options.channelType)],
+						channelNo: options[camelCaseStringLiteral(options.channelType)],
 						colour: options.colour,
 					},
 				})
@@ -390,7 +388,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					label: 'Scene',
 					id: 'scene',
 					default: 0,
-					choices: getChoices('Scene', SCENE_COUNT),
+					choices: makeDropdownChoices('Scene', SCENE_COUNT),
 					minChoicesForSearch: 0,
 				},
 			],
@@ -413,7 +411,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					label: 'Recall ID',
 					id: 'recallId',
 					default: 0,
-					choices: getChoices('ID', CUE_LIST_COUNT),
+					choices: makeDropdownChoices('ID', CUE_LIST_COUNT),
 					minChoicesForSearch: 0,
 				},
 			],
@@ -470,7 +468,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					label: 'Band',
 					id: 'band',
 					default: 0,
-					choices: getChoices('Band', 4),
+					choices: makeDropdownChoices('Band', 4),
 					minChoicesForSearch: 0,
 				},
 				{
@@ -517,7 +515,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					command: 'parametric_eq',
 					params: {
 						channelType: options.channelType,
-						channelNo: options[toCamelCase(options.channelType)],
+						channelNo: options[camelCaseStringLiteral(options.channelType)],
 						bandNo: options.band,
 						type: options.type,
 						frequency: options.frequency,
@@ -536,7 +534,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					label: 'Input Channel',
 					id: 'input',
 					default: 0,
-					choices: getChoices('Input Channel', INPUT_CHANNEL_COUNT),
+					choices: makeDropdownChoices('Input Channel', INPUT_CHANNEL_COUNT),
 					minChoicesForSearch: 0,
 				},
 				{
@@ -567,7 +565,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					label: 'Input Channel',
 					id: 'input',
 					default: 0,
-					choices: getChoices('Input Channel', INPUT_CHANNEL_COUNT),
+					choices: makeDropdownChoices('Input Channel', INPUT_CHANNEL_COUNT),
 					minChoicesForSearch: 0,
 				},
 				{

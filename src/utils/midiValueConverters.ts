@@ -1,6 +1,6 @@
-export const convertEqGainToMidiValue = (gain: number): number => Math.round(((gain + 15) * 127) / 30)
+import { EQ_MAXIMUM_GAIN, EQ_MINIMUM_GAIN, PREAMP_MAXIMUM_GAIN, PREAMP_MINIMUM_GAIN } from '../constants.js'
 
-type WidthMidiPoint = { width: number; midiValue: number }
+type EqWidthMidiValuePoint = { width: number; midiValue: number }
 
 /**
 EQ Width → MIDI Value Mapping
@@ -35,7 +35,7 @@ EQ Width → MIDI Value Mapping
 | 0.11̅   | 24       | 0x18     |
  */
 
-const WIDTH_TO_VV: readonly WidthMidiPoint[] = [
+const EQ_WIDTH_TO_MIDI_VALUE_MAP: readonly EqWidthMidiValuePoint[] = [
 	{ width: 1.5, midiValue: 0 },
 	{ width: 1.4, midiValue: 1 },
 	{ width: 1.3, midiValue: 2 },
@@ -63,15 +63,22 @@ const WIDTH_TO_VV: readonly WidthMidiPoint[] = [
 	{ width: 1 / 9, midiValue: 24 }, // 0.111...
 ] as const
 
-export const convertEqWidthToMidiValue = (width: number): number => {
-	let best = WIDTH_TO_VV[0]
+/**
+ * Helper function that takes a continuously variable value representing an EQ width and quantises
+ * it to one of a finite number of width choices as defined in the dLive MIDI specification
+ * @param width Number representing an EQ filter width
+ * @returns The MIDI value corresponding to the nearest width point defined in the dLive MIDI specification
+ */
+export const eqWidthToMidiValue = (width: number): number => {
+	let best = EQ_WIDTH_TO_MIDI_VALUE_MAP[0]
 	let bestDiff = Math.abs(width - best.width)
 
-	for (let i = 1; i < WIDTH_TO_VV.length; i++) {
-		const p = WIDTH_TO_VV[i]
-		const diff = Math.abs(width - p.width)
+	// Use an iterative approach to find the closest MIDI value for the given width
+	for (let i = 1; i < EQ_WIDTH_TO_MIDI_VALUE_MAP.length; i++) {
+		const midiValuePoint = EQ_WIDTH_TO_MIDI_VALUE_MAP[i]
+		const diff = Math.abs(width - midiValuePoint.width)
 		if (diff < bestDiff) {
-			best = p
+			best = midiValuePoint
 			bestDiff = diff
 		}
 	}
@@ -79,8 +86,29 @@ export const convertEqWidthToMidiValue = (width: number): number => {
 	return best.midiValue
 }
 
-export const convertPreampGainToMidiValue = (gain: number): number => Math.round(((gain - 5) / 55) * 0x7f)
+/**
+ * Helper function to convert dB gain to a MIDI value between 0-127
+ * @param gain Gain value in dB
+ * @returns The MIDI value from 0-127 value representing the gain
+ */
+export const dbGainToMidiValue = (gain: number, minGain: number, maxGain: number): number =>
+	Math.round(((gain - minGain) / (maxGain - minGain)) * 0x7f)
 
-export const midiValueToEqFrequency = (midiValue: number): number => Math.round(20 * Math.pow(1000, midiValue / 127))
+export const preampGainToMidiValue = (gain: number): number =>
+	dbGainToMidiValue(gain, PREAMP_MINIMUM_GAIN, PREAMP_MAXIMUM_GAIN)
 
-export const midiValueToHpfFrequency = (midiValue: number): number => Math.round(20 * Math.pow(100, midiValue / 127))
+export const eqGainToMidiValue = (gain: number): number => dbGainToMidiValue(gain, EQ_MINIMUM_GAIN, EQ_MAXIMUM_GAIN)
+
+/**
+ * Helper function to convert a MIDI value to a frequency between 0-20000 Hz
+ * @param midiValue MIDI value between 0-127
+ * @returns A frequency in Hz
+ */
+export const midiValueToEqFrequency = (midiValue: number): number => Math.round(20 * Math.pow(1000, midiValue / 0x7f))
+
+/**
+ * Helper function to convert a MIDI value to a HPF frequency between 0-1000Hz
+ * @param midiValue MIDI value between 0-127
+ * @returns A frequency in Hz
+ */
+export const midiValueToHpfFrequency = (midiValue: number): number => Math.round(20 * Math.pow(100, midiValue / 0x7f))

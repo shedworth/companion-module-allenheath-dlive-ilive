@@ -20,11 +20,15 @@ import { CHANNEL_MIDI_CHANNEL_OFFSETS, CHANNEL_MIDI_NOTE_OFFSETS, ChannelType } 
 | Stereo UFX Return 1 to 8| N + 4               | 5E to 65               |
  */
 
+/**
+ * Helper to return the relevant MIDI channel offset and MIDI note offset for
+ * the given channel type as described in the dLive MIDI specification.
+ * @param channelType The channel type
+ * @returns An object containing the MIDI channel offset and MIDI note offset
+ */
 export const getMidiOffsetsForChannelType = (
 	channelType: ChannelType,
-): { midiChannelOffset: number; midiNoteOffset: number } => {
-	return {
-		midiChannelOffset: CHANNEL_MIDI_CHANNEL_OFFSETS[channelType],
-		midiNoteOffset: CHANNEL_MIDI_NOTE_OFFSETS[channelType],
-	}
-}
+): { midiChannelOffset: number; midiNoteOffset: number } => ({
+	midiChannelOffset: CHANNEL_MIDI_CHANNEL_OFFSETS[channelType],
+	midiNoteOffset: CHANNEL_MIDI_NOTE_OFFSETS[channelType],
+})
