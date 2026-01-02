@@ -14,6 +14,8 @@ import {
 	FX_RETURN_COUNT,
 	INPUT_CHANNEL_COUNT,
 	MAIN_COUNT,
+	MAX_TCP_PORT,
+	MIN_TCP_PORT,
 	MIXRACK_DX_SOCKET_COUNT,
 	MIXRACK_SOCKET_COUNT,
 	MONO_AUX_COUNT,
@@ -178,7 +180,7 @@ const MuteActionSchema = CompanionActionEventBaseSchema.extend({
 const FaderLevelActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...channelOptions,
-		level: z.number().int().min(0).max(128),
+		level: z.number().int().min(0).max(127),
 	}),
 })
 
@@ -193,7 +195,7 @@ const AuxFXMatrixSendLevelActionSchema = CompanionActionEventBaseSchema.extend({
 	options: z.object({
 		...channelOptions,
 		...prefixShape(channelOptions, 'destination'),
-		level: z.number().int().min(0).max(128),
+		level: z.number().int().min(0).max(127),
 	}),
 })
 
@@ -364,8 +366,8 @@ const SetUfxUnitParameterActionSchema = CompanionActionEventBaseSchema.extend({
  */
 const DliveModuleConfigSchema = z.object({
 	host: z.string(),
-	midiChannel: z.number().int().min(0).max(16),
-	midiPort: z.number().int().min(0).max(65535),
+	midiChannel: z.number().int().min(0).max(11),
+	midiPort: z.number().int().min(MIN_TCP_PORT).max(MAX_TCP_PORT),
 })
 
 export type MuteAction = z.infer<typeof MuteActionSchema>

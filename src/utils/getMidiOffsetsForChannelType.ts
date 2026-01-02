@@ -1,4 +1,4 @@
-import { CHANNEL_MIDI_CHANNEL_OFFSETS, CHANNEL_MIDI_NOTE_OFFSETS, ChannelType } from '../constants.js'
+import { CHANNEL_MIDI_CHANNEL_OFFSETS, CHANNEL_MIDI_NOTE_OFFSETS } from '../constants.js'
 
 /**
 | Audio Type              | MIDI Channel Offset | Note Number (CH) Range |

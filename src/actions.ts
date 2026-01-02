@@ -42,7 +42,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseMuteAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: options.mute ? 'mute_on' : 'mute_off',
 					params: {
 						channelType: options.channelType,
@@ -67,7 +67,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseFaderLevelAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'fader_level',
 					params: {
 						channelType: options.channelType,
@@ -104,7 +104,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseAssignChannelToMainMixAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: options.assign ? 'channel_assignment_to_main_mix_on' : 'channel_assignment_to_main_mix_off',
 					params: {
 						channelType: options.channelType,
@@ -122,17 +122,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 				}),
 				...getChannelSelectOptions({
 					prefix: 'destination',
-					exclude: [
-						'input',
-						'mono_group',
-						'stereo_group',
-						'fx_return',
-						'main',
-						'dca',
-						'mute_group',
-						'stereo_ufx_return',
-						'stereo_ufx_send',
-					],
+					include: ['mono_aux', 'stereo_aux', 'mono_fx_send', 'stereo_fx_send', 'mono_matrix', 'stereo_matrix'],
 				}),
 				{
 					type: 'dropdown',
@@ -145,7 +135,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseAuxFxMatrixSendLevelAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'aux_fx_matrix_send_level',
 					params: {
 						channelType: options.channelType,
@@ -176,7 +166,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseInputToGroupAuxOnAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'input_to_group_aux_on',
 					params: {
 						channelNo: options.input,
@@ -210,7 +200,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseDcaAssignAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: options.assign ? 'dca_assignment_on' : 'dca_assignment_off',
 					params: {
 						channelType: options.channelType,
@@ -244,7 +234,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseMuteGroupAssignAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: options.assign ? 'mute_group_assignment_on' : 'mute_group_assignment_off',
 					params: {
 						channelType: options.channelType,
@@ -272,7 +262,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseSetSocketPreampGainAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'set_socket_preamp_gain',
 					params: {
 						socketType: options.socketType,
@@ -296,7 +286,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseSetSocketPreampPadAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'set_socket_preamp_pad',
 					params: {
 						socketType: options.socketType,
@@ -320,7 +310,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseSetSocketPreamp48vAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'set_socket_preamp_48v',
 					params: {
 						socketType: options.socketType,
@@ -344,7 +334,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseSetChannelNameAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'set_channel_name',
 					params: {
 						channelType: options.channelType,
@@ -369,7 +359,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseSetChannelColourAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'set_channel_colour',
 					params: {
 						channelType: options.channelType,
@@ -394,7 +384,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseRecallSceneAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'scene_recall',
 					params: {
 						sceneNo: options.scene,
@@ -417,7 +407,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseRecallCueListAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'cue_list_recall',
 					params: {
 						recallId: options.recallId,
@@ -449,7 +439,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseGoNextPreviousAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'go_next_previous',
 					params: {
 						controlNumber: options.controlNumber,
@@ -511,7 +501,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseParametricEqAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'parametric_eq',
 					params: {
 						channelType: options.channelType,
@@ -547,7 +537,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseHpfFrequencyAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'hpf_frequency',
 					params: {
 						channelNo: options.input,
@@ -577,7 +567,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseSetHpfOnOffAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'set_hpf_on_off',
 					params: {
 						channelNo: options.input,
@@ -601,7 +591,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseSetUfxGlobalKeyAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'set_ufx_global_key',
 					params: {
 						key: options.key,
@@ -624,7 +614,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseSetUfxGlobalScaleAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'set_ufx_global_scale',
 					params: {
 						scale: options.scale,
@@ -664,7 +654,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			],
 			callback: async (action) => {
 				const { options } = validators.parseSetUfxUnitParameterAction(action)
-				companionModule.sendCommand({
+				companionModule.processCommand({
 					command: 'set_ufx_unit_parameter',
 					params: {
 						midiChannel: options.midiChannel - 1,

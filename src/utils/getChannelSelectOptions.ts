@@ -4,7 +4,6 @@ import { includes, join } from 'lodash/fp'
 
 import {
 	CHANNEL_TYPE_CHOICES,
-	ChannelType,
 	DCA_COUNT,
 	FX_RETURN_COUNT,
 	INPUT_CHANNEL_COUNT,

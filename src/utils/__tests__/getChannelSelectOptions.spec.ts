@@ -1,6 +1,6 @@
 import { includes } from 'lodash/fp'
 
-import { CHANNEL_TYPE_CHOICES, ChannelType } from '../../constants.js'
+import { CHANNEL_TYPE_CHOICES } from '../../constants.js'
 import { getChannelSelectOptions, prependPrefix } from '../getChannelSelectOptions.js'
 
 describe('prependPrefix', () => {

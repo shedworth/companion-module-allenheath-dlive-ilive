@@ -3,7 +3,6 @@ import { camelCase, noop } from 'lodash/fp'
 
 import { UpdateActions } from '../../src/actions.js'
 import {
-	ChannelType,
 	DCA_COUNT,
 	FX_RETURN_COUNT,
 	INPUT_CHANNEL_COUNT,

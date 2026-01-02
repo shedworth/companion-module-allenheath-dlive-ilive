@@ -3,6 +3,14 @@ import { times } from 'lodash/fp'
 
 import { midiValueToEqFrequency, midiValueToHpfFrequency } from './utils/index.js'
 
+// Companion config
+export const DEFAULT_MIDI_TCP_PORT = 51328
+export const MIN_TCP_PORT = 1
+export const MAX_TCP_PORT = 65535
+export const DEFAULT_MIDI_CHANNEL = 0
+export const DEFAULT_TARGET_IP = '192.168.1.70'
+
+// dLive constants
 export const INPUT_CHANNEL_COUNT = 128
 export const MONO_GROUP_COUNT = 62
 export const STEREO_GROUP_COUNT = 31
@@ -44,7 +52,7 @@ export const EQ_MAXIMUM_GAIN = 15
 export const HPF_MINIMUM_FREQUENCY = 20
 export const HPF_MAXIMUM_FREQUENCY = 2000
 
-export const CHANNEL_TYPES = [
+export const CHANNEL_TYPES: Readonly<ChannelType[]> = [
 	'input',
 	'mono_group',
 	'stereo_group',
@@ -60,21 +68,26 @@ export const CHANNEL_TYPES = [
 	'stereo_ufx_send',
 	'stereo_ufx_return',
 	'dca',
-] as const
+]
 
-export type ChannelType = (typeof CHANNEL_TYPES)[number]
+export const SOCKET_TYPES: Readonly<SocketType[]> = [
+	'mixrack_sockets_1_to_64',
+	'mixrack_dx_1_to_2',
+	'mixrack_dx_3_to_4',
+]
 
-export const SOCKET_TYPES = ['mixrack_sockets_1_to_64', 'mixrack_dx_1_to_2', 'mixrack_dx_3_to_4'] as const
+export const CHANNEL_COLOURS: Readonly<ChannelColour[]> = [
+	'off',
+	'red',
+	'green',
+	'yellow',
+	'blue',
+	'purple',
+	'light_blue',
+	'white',
+]
 
-export type SocketType = (typeof SOCKET_TYPES)[number]
-
-export const CHANNEL_COLOURS = ['off', 'red', 'green', 'yellow', 'blue', 'purple', 'light_blue', 'white'] as const
-
-export type ChannelColour = (typeof CHANNEL_COLOURS)[number]
-
-export const EQ_TYPES = ['bell', 'lf_shelf', 'hf_shelf', 'low_pass', 'high_pass'] as const
-
-declare type EqType = (typeof EQ_TYPES)[number]
+export const EQ_TYPES: Readonly<EqType[]> = ['bell', 'lf_shelf', 'hf_shelf', 'low_pass', 'high_pass']
 
 /**
 | Audio Type              | MIDI Channel Offset | Note Number (CH) Range |
@@ -98,33 +111,33 @@ declare type EqType = (typeof EQ_TYPES)[number]
 
 // Refer to the above table
 export const CHANNEL_MIDI_CHANNEL_OFFSETS: Record<ChannelType, number> = {
-	input: 0,
-	mono_group: 1,
-	stereo_group: 1,
-	mono_aux: 2,
-	stereo_aux: 2,
-	mono_matrix: 3,
-	stereo_matrix: 3,
-	mono_fx_send: 4,
-	stereo_fx_send: 4,
-	fx_return: 4,
-	main: 4,
-	dca: 4,
-	mute_group: 4,
-	stereo_ufx_send: 4,
-	stereo_ufx_return: 4,
+	input: 0x00,
+	mono_group: 0x01,
+	stereo_group: 0x01,
+	mono_aux: 0x02,
+	stereo_aux: 0x02,
+	mono_matrix: 0x03,
+	stereo_matrix: 0x03,
+	mono_fx_send: 0x04,
+	stereo_fx_send: 0x04,
+	fx_return: 0x04,
+	main: 0x04,
+	dca: 0x04,
+	mute_group: 0x04,
+	stereo_ufx_send: 0x04,
+	stereo_ufx_return: 0x04,
 }
 
 // Refer to the above table
 export const CHANNEL_MIDI_NOTE_OFFSETS: Record<ChannelType, number> = {
-	input: 0,
-	mono_group: 0,
+	input: 0x00,
+	mono_group: 0x00,
 	stereo_group: 0x40,
-	mono_aux: 0,
+	mono_aux: 0x00,
 	stereo_aux: 0x40,
-	mono_matrix: 0,
+	mono_matrix: 0x00,
 	stereo_matrix: 0x40,
-	mono_fx_send: 0,
+	mono_fx_send: 0x00,
 	stereo_fx_send: 0x10,
 	fx_return: 0x20,
 	main: 0x30,
@@ -135,12 +148,12 @@ export const CHANNEL_MIDI_NOTE_OFFSETS: Record<ChannelType, number> = {
 }
 
 export const SOCKET_MIDI_NOTE_OFFSETS: Record<SocketType, number> = {
-	mixrack_sockets_1_to_64: 0,
+	mixrack_sockets_1_to_64: 0x00,
 	mixrack_dx_1_to_2: 0x40,
 	mixrack_dx_3_to_4: 0x60,
 }
 
-export const SYSEX_HEADER = [0xf0, 0, 0, 0x1a, 0x50, 0x10, 0x01, 0x00]
+export const SYSEX_HEADER = [0xf0, 0x00, 0x00, 0x1a, 0x50, 0x10, 0x01, 0x00]
 
 export const CHANNEL_TYPE_CHOICES: { label: string; id: ChannelType }[] = [
 	{ label: 'Input', id: 'input' },
@@ -197,13 +210,6 @@ export const HPF_FREQUENCY_CHOICES: { label: string; id: number }[] = times((n) 
 	return { label, id: n }
 })(128)
 
-type EqMidiParameters = {
-	frequency: number
-	width: number
-	gain: number
-	type: number
-}
-
 export const EQ_PARAMETER_MIDI_VALUES_FOR_BANDS: Record<number, EqMidiParameters> = {
 	0: { type: 0x1a, frequency: 0x1b, width: 0x1c, gain: 0x1d },
 	1: { type: 0x1e, frequency: 0x1f, width: 0x20, gain: 0x21 },
@@ -257,4 +263,19 @@ export const UFX_KEY_CHOICES: DropdownChoice[] = [
 export const UFX_SCALE_CHOICES: DropdownChoice[] = [
 	{ label: 'Major', id: 0x00 },
 	{ label: 'Minor', id: 0x01 },
+]
+
+export const MAIN_MIDI_CHANNEL_CHOICES: DropdownChoice[] = [
+	{ label: '1 to 5', id: 0 },
+	{ label: '2 to 6', id: 1 },
+	{ label: '3 to 7', id: 2 },
+	{ label: '4 to 8', id: 3 },
+	{ label: '5 to 9', id: 4 },
+	{ label: '6 to 10', id: 5 },
+	{ label: '7 to 11', id: 6 },
+	{ label: '8 to 12', id: 7 },
+	{ label: '9 to 13', id: 8 },
+	{ label: '10 to 14', id: 9 },
+	{ label: '11 to 15', id: 10 },
+	{ label: '12 to 16', id: 11 },
 ]

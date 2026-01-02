@@ -8,7 +8,6 @@ import {
 	PREAMP_MAXIMUM_GAIN,
 	PREAMP_MINIMUM_GAIN,
 	SOCKET_MIDI_NOTE_OFFSETS,
-	SocketType,
 } from '../../src/constants.js'
 import { ModuleInstance } from '../../src/main.js'
 import { preampGainToMidiValue } from '../../src/utils/index.js'

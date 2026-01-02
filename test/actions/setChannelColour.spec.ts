@@ -4,8 +4,6 @@ import { camelCase, indexOf, noop } from 'lodash/fp'
 import { UpdateActions } from '../../src/actions.js'
 import {
 	CHANNEL_COLOURS,
-	ChannelColour,
-	ChannelType,
 	FX_RETURN_COUNT,
 	INPUT_CHANNEL_COUNT,
 	MAIN_COUNT,

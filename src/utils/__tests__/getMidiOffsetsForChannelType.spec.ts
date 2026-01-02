@@ -1,4 +1,3 @@
-import { ChannelType } from '../../constants.js'
 import { getMidiOffsetsForChannelType } from '../getMidiOffsetsForChannelType.js'
 
 const TEST_CASES: [ChannelType, number, number][] = [

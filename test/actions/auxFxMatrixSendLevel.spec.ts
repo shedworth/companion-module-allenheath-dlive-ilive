@@ -3,7 +3,6 @@ import { camelCase, noop } from 'lodash/fp'
 
 import { UpdateActions } from '../../src/actions.js'
 import {
-	ChannelType,
 	DCA_COUNT,
 	FX_RETURN_COUNT,
 	INPUT_CHANNEL_COUNT,
@@ -111,7 +110,7 @@ describe('auxFxMatrixSendLevel action', () => {
 		['stereo_matrix', STEREO_MATRIX_COUNT],
 	]
 
-	const testLevels = [0, 64, 128]
+	const testLevels = [0, 64, 127]
 
 	describe.each(sourceChannelTestCases)('source channel %s', (sourceChannelType, sourceChannelCount) => {
 		describe.each(destinationChannelTestCases)('destination channel %s', (destinationChannelType) => {

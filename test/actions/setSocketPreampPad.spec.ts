@@ -6,7 +6,6 @@ import {
 	MIXRACK_DX_SOCKET_COUNT,
 	MIXRACK_SOCKET_COUNT,
 	SOCKET_MIDI_NOTE_OFFSETS,
-	SocketType,
 	SYSEX_HEADER,
 } from '../../src/constants.js'
 import { ModuleInstance } from '../../src/main.js'

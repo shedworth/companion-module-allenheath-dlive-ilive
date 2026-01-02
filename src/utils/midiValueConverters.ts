@@ -36,31 +36,31 @@ EQ Width → MIDI Value Mapping
  */
 
 const EQ_WIDTH_TO_MIDI_VALUE_MAP: readonly EqWidthMidiValuePoint[] = [
-	{ width: 1.5, midiValue: 0 },
-	{ width: 1.4, midiValue: 1 },
-	{ width: 1.3, midiValue: 2 },
-	{ width: 1.2, midiValue: 3 },
-	{ width: 1.1, midiValue: 4 },
-	{ width: 1.0, midiValue: 5 },
-	{ width: 0.95, midiValue: 6 },
-	{ width: 0.9, midiValue: 7 },
-	{ width: 0.85, midiValue: 8 },
-	{ width: 0.8, midiValue: 9 },
-	{ width: 3 / 4, midiValue: 10 }, // 0.75
-	{ width: 0.7, midiValue: 11 },
-	{ width: 2 / 3, midiValue: 12 }, // 0.666...
-	{ width: 0.6, midiValue: 13 },
-	{ width: 0.55, midiValue: 14 },
-	{ width: 0.5, midiValue: 15 },
-	{ width: 0.45, midiValue: 16 },
-	{ width: 0.4, midiValue: 17 },
-	{ width: 1 / 3, midiValue: 18 }, // 0.333...
-	{ width: 0.3, midiValue: 19 },
-	{ width: 1 / 4, midiValue: 20 }, // 0.25
-	{ width: 0.2, midiValue: 21 },
-	{ width: 1 / 6, midiValue: 22 }, // 0.166...
-	{ width: 0.13, midiValue: 23 },
-	{ width: 1 / 9, midiValue: 24 }, // 0.111...
+	{ width: 1.5, midiValue: 0x00 },
+	{ width: 1.4, midiValue: 0x01 },
+	{ width: 1.3, midiValue: 0x02 },
+	{ width: 1.2, midiValue: 0x03 },
+	{ width: 1.1, midiValue: 0x04 },
+	{ width: 1.0, midiValue: 0x05 },
+	{ width: 0.95, midiValue: 0x06 },
+	{ width: 0.9, midiValue: 0x07 },
+	{ width: 0.85, midiValue: 0x08 },
+	{ width: 0.8, midiValue: 0x09 },
+	{ width: 3 / 4, midiValue: 0x0a }, // 0.75
+	{ width: 0.7, midiValue: 0x0b },
+	{ width: 2 / 3, midiValue: 0x0c }, // 0.666...
+	{ width: 0.6, midiValue: 0x0d },
+	{ width: 0.55, midiValue: 0x0e },
+	{ width: 0.5, midiValue: 0x0f },
+	{ width: 0.45, midiValue: 0x10 },
+	{ width: 0.4, midiValue: 0x11 },
+	{ width: 1 / 3, midiValue: 0x12 }, // 0.333...
+	{ width: 0.3, midiValue: 0x13 },
+	{ width: 1 / 4, midiValue: 0x14 }, // 0.25
+	{ width: 0.2, midiValue: 0x15 },
+	{ width: 1 / 6, midiValue: 0x16 }, // 0.166...
+	{ width: 0.13, midiValue: 0x17 },
+	{ width: 1 / 9, midiValue: 0x18 }, // 0.111...
 ] as const
 
 /**

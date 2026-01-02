@@ -3,7 +3,6 @@ import { camelCase, noop } from 'lodash/fp'
 
 import { UpdateActions } from '../../src/actions.js'
 import {
-	ChannelType,
 	EQ_MAXIMUM_GAIN,
 	EQ_MINIMUM_GAIN,
 	EQ_PARAMETER_MIDI_VALUES_FOR_BANDS,
