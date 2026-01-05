@@ -156,16 +156,6 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 					const { channelNo, channelType, level } = params
 					const { midiChannelOffset, midiNoteOffset } = getMidiOffsetsForChannelType(channelType)
 					this.sendMidiToDlive([
-						...SYSEX_HEADER,
-						0x00 + this.baseMidiChannel + midiChannelOffset,
-						0x05,
-						0x0b,
-						0x17,
-						channelNo + midiNoteOffset,
-						0x0f7,
-					])
-					break
-					this.sendMidiToDlive([
 						0xb0 + this.baseMidiChannel + midiChannelOffset,
 						0x63,
 						channelNo + midiNoteOffset,
@@ -312,7 +302,6 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				}
 
 				case 'set_socket_preamp_pad': {
-					// not tested
 					const { socketNo, socketType, shouldEnable } = params
 					const midiNoteOffset = SOCKET_MIDI_NOTE_OFFSETS[socketType]
 					this.sendMidiToDlive([
@@ -327,7 +316,6 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				}
 
 				case 'set_socket_preamp_48v': {
-					// not tested
 					const { socketNo, socketType, shouldEnable } = params
 					const midiNoteOffset = SOCKET_MIDI_NOTE_OFFSETS[socketType]
 					this.sendMidiToDlive([
@@ -369,7 +357,6 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 					break
 				}
 
-				// Mixrack only
 				case 'scene_recall': {
 					const { sceneNo } = params
 					const sceneBankNo = Math.floor(sceneNo / SCENES_PER_BANK)
@@ -378,8 +365,6 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 					break
 				}
 
-				// not tested
-				// Surface only
 				case 'cue_list_recall': {
 					const { recallId } = params
 					const recallBankNo = Math.min(0x0f, Math.floor(recallId / CUE_LISTS_PER_BANK))
@@ -388,7 +373,6 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 					break
 				}
 
-				// not tested
 				case 'go_next_previous': {
 					const { controlNumber, controlValue } = params
 					this.sendMidiToDlive([0xb0 + this.baseMidiChannel, controlNumber, controlValue])
@@ -515,6 +499,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				type: 'textinput',
 				id: 'host',
 				label: 'Target IP',
+				tooltip: 'Default for surface is 192.168.1.71, default for mixrack is 192.168.1.70',
 				width: 6,
 				default: DEFAULT_TARGET_IP,
 				regex: Regex.IP,
@@ -524,6 +509,7 @@ export class ModuleInstance extends InstanceBase<DLiveModuleConfig> {
 				id: 'midiPort',
 				label: 'MIDI Port',
 				width: 6,
+				tooltip: 'Default for surface is 51328, default for mixrack is 51325',
 				default: DEFAULT_MIDI_TCP_PORT,
 				min: MIN_TCP_PORT,
 				max: MAX_TCP_PORT,

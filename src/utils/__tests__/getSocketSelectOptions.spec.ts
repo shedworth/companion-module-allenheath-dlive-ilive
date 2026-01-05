@@ -25,7 +25,7 @@ const SOCKET_INPUT_FIELDS = [
 		default: 0,
 		choices: expect.arrayContaining([{ label: 'Socket 1', id: 0 }]),
 		minChoicesForSearch: 0,
-		isVisibleExpression: `$(options:socketType) == "mixrackSockets_1_64"`,
+		isVisibleExpression: `$(options:socketType) == "mixrack_sockets_1_to_64"`,
 	},
 	{
 		type: 'dropdown',
@@ -34,7 +34,7 @@ const SOCKET_INPUT_FIELDS = [
 		default: 0,
 		choices: expect.arrayContaining([{ label: 'Socket 1', id: 0 }]),
 		minChoicesForSearch: 0,
-		isVisibleExpression: `$(options:socketType) == "mixrack_dx_1_2"`,
+		isVisibleExpression: `$(options:socketType) == "mixrack_dx_1_to_2"`,
 	},
 	{
 		type: 'dropdown',
@@ -43,6 +43,6 @@ const SOCKET_INPUT_FIELDS = [
 		default: 0,
 		choices: expect.arrayContaining([{ label: 'Socket 1', id: 0 }]),
 		minChoicesForSearch: 0,
-		isVisibleExpression: `$(options:socketType) == "mixrack_dx_3_4"`,
+		isVisibleExpression: `$(options:socketType) == "mixrack_dx_3_to_4"`,
 	},
 ]

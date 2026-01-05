@@ -1,4 +1,4 @@
-import { camelCase } from 'lodash/fp'
+import { camelCase, includes } from 'lodash/fp'
 
 import {
 	CHANNEL_COLOUR_CHOICES,
@@ -118,11 +118,19 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 			name: 'Aux/FX/Matrix Send Level',
 			options: [
 				...getChannelSelectOptions({
-					exclude: ['mono_aux', 'stereo_aux', 'mono_fx_send', 'stereo_fx_send', 'mono_matrix', 'stereo_matrix'],
+					include: ['input', 'mono_group', 'stereo_group', 'fx_return', 'stereo_ufx_return'],
 				}),
 				...getChannelSelectOptions({
 					prefix: 'destination',
-					include: ['mono_aux', 'stereo_aux', 'mono_fx_send', 'stereo_fx_send', 'mono_matrix', 'stereo_matrix'],
+					include: [
+						'mono_aux',
+						'stereo_aux',
+						'mono_fx_send',
+						'stereo_fx_send',
+						'mono_matrix',
+						'stereo_matrix',
+						'stereo_ufx_send',
+					],
 				}),
 				{
 					type: 'dropdown',
@@ -161,7 +169,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 				},
 				...getChannelSelectOptions({
 					prefix: 'destination',
-					include: ['mono_group', 'stereo_group', 'mono_aux', 'stereo_aux'],
+					include: ['mono_group', 'stereo_group', 'mono_aux', 'stereo_aux', 'mono_matrix', 'stereo_matrix'],
 				}),
 			],
 			callback: async (action) => {
@@ -253,7 +261,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					type: 'number',
 					label: 'Gain',
 					id: 'gain',
-					default: 0,
+					default: 5,
 					min: PREAMP_MINIMUM_GAIN,
 					max: PREAMP_MAXIMUM_GAIN,
 					range: true,
@@ -348,7 +356,7 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 		setChannelColour: {
 			name: 'Set Channel Colour',
 			options: [
-				...getChannelSelectOptions(),
+				...getChannelSelectOptions({ exclude: ['mute_group'] }),
 				{
 					type: 'dropdown',
 					label: 'Colour',
@@ -378,8 +386,9 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 					label: 'Scene',
 					id: 'scene',
 					default: 0,
-					choices: makeDropdownChoices('Scene', SCENE_COUNT),
+					choices: makeDropdownChoices('Scene', SCENE_COUNT, { startIndex: 8 }),
 					minChoicesForSearch: 0,
+					tooltip: 'Scenes 1-8 are reserved utility scenes and cannot be recalled',
 				},
 			],
 			callback: async (action) => {
@@ -394,14 +403,15 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 		},
 
 		recallCueList: {
-			name: 'Recall Cue List (Surface Only)',
+			name: 'Recall Cue List',
 			options: [
 				{
 					type: 'dropdown',
 					label: 'Recall ID',
 					id: 'recallId',
 					default: 0,
-					choices: makeDropdownChoices('ID', CUE_LIST_COUNT),
+					// cue list IDs on the dLive start at 0 not 1 so we need to offset the label by -1
+					choices: makeDropdownChoices('ID', CUE_LIST_COUNT, { labelOffset: -1 }),
 					minChoicesForSearch: 0,
 				},
 			],
@@ -452,7 +462,9 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 		parametricEq: {
 			name: 'Parametric EQ',
 			options: [
-				...getChannelSelectOptions(),
+				...getChannelSelectOptions({
+					exclude: ['mute_group', 'dca', 'mono_fx_send', 'stereo_fx_send', 'stereo_ufx_send', 'stereo_ufx_return'],
+				}),
 				{
 					type: 'dropdown',
 					label: 'Band',
@@ -464,53 +476,184 @@ export const UpdateActions = (companionModule: ModuleInstance): void => {
 				{
 					type: 'dropdown',
 					label: 'Type',
-					id: 'type',
+					id: 'band0Type',
 					default: 'bell',
-					choices: EQ_TYPE_CHOICES,
+					choices: EQ_TYPE_CHOICES.filter((choice) => !includes(choice.id, ['hf_shelf', 'low_pass'])),
 					minChoicesForSearch: 0,
-					isVisibleExpression: `$(options:band) == 0 || $(options:band) == 3`,
+					isVisibleExpression: `$(options:band) == 0`,
+				},
+				{
+					type: 'dropdown',
+					label: 'Type',
+					id: 'band3Type',
+					default: 'bell',
+					choices: EQ_TYPE_CHOICES.filter((choice) => !includes(choice.id, ['lf_shelf', 'high_pass'])),
+					minChoicesForSearch: 0,
+					isVisibleExpression: `$(options:band) == 3`,
 				},
 				{
 					type: 'dropdown',
 					label: 'Frequency',
-					id: 'frequency',
+					id: 'band0Frequency',
 					default: 72, // 1kHz
 					choices: EQ_FREQUENCY_CHOICES,
+					isVisibleExpression: `$(options:band) == 0`,
+				},
+				{
+					type: 'dropdown',
+					label: 'Frequency',
+					id: 'band1Frequency',
+					default: 72, // 1kHz
+					choices: EQ_FREQUENCY_CHOICES,
+					isVisibleExpression: `$(options:band) == 1`,
+				},
+				{
+					type: 'dropdown',
+					label: 'Frequency',
+					id: 'band2Frequency',
+					default: 72, // 1kHz
+					choices: EQ_FREQUENCY_CHOICES,
+					isVisibleExpression: `$(options:band) == 2`,
+				},
+				{
+					type: 'dropdown',
+					label: 'Frequency',
+					id: 'band3Frequency',
+					default: 72, // 1kHz
+					choices: EQ_FREQUENCY_CHOICES,
+					isVisibleExpression: `$(options:band) == 3`,
 				},
 				{
 					type: 'number',
 					label: 'Width',
-					id: 'width',
+					id: 'band0Width',
 					default: 1,
 					max: EQ_MAXIMUM_WIDTH,
 					min: EQ_MINIMUM_WIDTH,
 					step: 0.05,
 					range: true,
-					isVisibleExpression: `$(options:type) == 'bell'`,
+					isVisibleExpression: `$(options:band) == 0 && $(options:band0Type) == 'bell'`,
+				},
+				{
+					type: 'number',
+					label: 'Width',
+					id: 'band1Width',
+					default: 1,
+					max: EQ_MAXIMUM_WIDTH,
+					min: EQ_MINIMUM_WIDTH,
+					step: 0.05,
+					range: true,
+					isVisibleExpression: `$(options:band) == 1`,
+				},
+				{
+					type: 'number',
+					label: 'Width',
+					id: 'band2Width',
+					default: 1,
+					max: EQ_MAXIMUM_WIDTH,
+					min: EQ_MINIMUM_WIDTH,
+					step: 0.05,
+					range: true,
+					isVisibleExpression: `$(options:band) == 2`,
+				},
+				{
+					type: 'number',
+					label: 'Width',
+					id: 'band3Width',
+					default: 1,
+					max: EQ_MAXIMUM_WIDTH,
+					min: EQ_MINIMUM_WIDTH,
+					step: 0.05,
+					range: true,
+					isVisibleExpression: `$(options:band) == 3 && $(options:band3Type) == 'bell'`,
 				},
 				{
 					type: 'number',
 					label: 'Gain',
-					id: 'gain',
+					id: 'band0Gain',
 					default: 0,
 					min: EQ_MINIMUM_GAIN,
 					max: EQ_MAXIMUM_GAIN,
 					range: true,
 					step: 0.5,
+					isVisibleExpression: `$(options:band) == 0 && $(options:band0Type) !== 'high_pass' && $(options:band0Type) !== 'low_pass'`,
+				},
+				{
+					type: 'number',
+					label: 'Gain',
+					id: 'band1Gain',
+					default: 0,
+					min: EQ_MINIMUM_GAIN,
+					max: EQ_MAXIMUM_GAIN,
+					range: true,
+					step: 0.5,
+					isVisibleExpression: `$(options:band) == 1`,
+				},
+				{
+					type: 'number',
+					label: 'Gain',
+					id: 'band2Gain',
+					default: 0,
+					min: EQ_MINIMUM_GAIN,
+					max: EQ_MAXIMUM_GAIN,
+					range: true,
+					step: 0.5,
+					isVisibleExpression: `$(options:band) == 2`,
+				},
+				{
+					type: 'number',
+					label: 'Gain',
+					id: 'band3Gain',
+					default: 0,
+					min: EQ_MINIMUM_GAIN,
+					max: EQ_MAXIMUM_GAIN,
+					range: true,
+					step: 0.5,
+					isVisibleExpression: `$(options:band) == 3 && $(options:band3Type) != 'high_pass' && $(options:band3Type) != 'low_pass'`,
 				},
 			],
 			callback: async (action) => {
 				const { options } = validators.parseParametricEqAction(action)
+
+				// Map band number to corresponding option values
+				const typeMap: Record<number, EqType> = {
+					0: options.band0Type,
+					1: 'bell',
+					2: 'bell',
+					3: options.band3Type,
+				}
+
+				const frequencyMap: Record<number, number> = {
+					0: options.band0Frequency,
+					1: options.band1Frequency,
+					2: options.band2Frequency,
+					3: options.band3Frequency,
+				}
+
+				const widthMap: Record<number, number> = {
+					0: options.band0Width,
+					1: options.band1Width,
+					2: options.band2Width,
+					3: options.band3Width,
+				}
+
+				const gainMap: Record<number, number> = {
+					0: options.band0Gain,
+					1: options.band1Gain,
+					2: options.band2Gain,
+					3: options.band3Gain,
+				}
+
 				companionModule.processCommand({
 					command: 'parametric_eq',
 					params: {
 						channelType: options.channelType,
 						channelNo: options[camelCaseStringLiteral(options.channelType)],
 						bandNo: options.band,
-						type: options.type,
-						frequency: options.frequency,
-						width: options.width,
-						gain: options.gain,
+						type: typeMap[options.band],
+						frequency: frequencyMap[options.band],
+						width: widthMap[options.band],
+						gain: gainMap[options.band],
 					},
 				})
 			},
